@@ -13,14 +13,15 @@
             --text-muted: #888888;
             --success-color: #4ecca3;
             --warning-color: #ffd369;
+            --danger-color: #d9534f;
         }
+        * { -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 15px;
-            padding-bottom: 90px; /* Отступ под таймер */
+            padding: 0 15px 120px;
         }
         h2, h3, h4 { margin: 10px 0; }
         select, button, input {
@@ -33,336 +34,834 @@
             width: 100%;
             box-sizing: border-box;
         }
-        button {
-            background-color: var(--accent-color);
-            cursor: pointer;
-            font-weight: bold;
+        button { background-color: var(--accent-color); cursor: pointer; font-weight: bold; }
+        button:active { transform: scale(0.98); }
+
+        /* Вкладки */
+        .tabs {
+            display: flex; gap: 6px; overflow-x: auto;
+            position: sticky; top: 0; z-index: 900;
+            background: var(--bg-color); padding: 12px 0 8px;
         }
+        .tabs button {
+            width: auto; flex: 0 0 auto; white-space: nowrap;
+            padding: 10px 14px; background: #2d2d2d; font-size: 14px;
+        }
+        .tabs button.active { background: var(--accent-color); color: #111; }
+
         .workout-section {
             background: var(--card-bg);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 15px;
+            padding: 15px; border-radius: 12px; margin-bottom: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        .exercise-card {
-            background: #252525;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
+        .exercise-card { background: #252525; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
         .set-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 50px;
-            gap: 5px;
-            align-items: center;
-            margin-bottom: 8px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 50px;
+            gap: 5px; align-items: center; margin-bottom: 8px;
         }
         .set-row input { padding: 8px; text-align: center; font-size: 14px; }
         .set-row span { text-align: center; color: var(--text-muted); }
         .set-header {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr 50px;
-            font-size: 11px;
-            color: var(--text-muted);
-            text-align: center;
-            margin-bottom: 5px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 50px;
+            font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 5px;
         }
         .btn-check { background-color: var(--success-color); font-size: 14px; padding: 8px; }
         .btn-check.done { background-color: #393e46; opacity: 0.5; }
-        
-        /* Нижняя панель таймера */
+
+        .set-controls { display: flex; gap: 8px; margin: 6px 0 4px; }
+        .set-controls button {
+            background: #2d2d2d; border: 1px solid #444; font-size: 12px;
+            padding: 6px 10px; width: auto; flex: 1; font-weight: normal; color: var(--text-muted);
+        }
+        .last-perf {
+            background: #1b1b1b; border: 1px dashed #3a3a3a; border-radius: 6px;
+            padding: 8px 10px; margin: 8px 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+        }
+        .last-perf .pr { color: var(--success-color); font-weight: bold; }
+        .btn-repeat {
+            background: #2d2d2d; border: 1px solid var(--accent-color); color: var(--accent-color);
+            font-size: 12px; padding: 5px 10px; width: auto; margin-top: 6px;
+        }
+        .vol-tag { color: var(--accent-color); font-size: 12px; font-weight: bold; font-family: monospace; }
+        .ex-head { display: flex; justify-content: space-between; align-items: center; }
+        .btn-remove-ex { background: transparent; border: none; color: var(--danger-color); width: auto; padding: 0 6px; font-size: 18px; }
+
         .timer-panel {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #222831;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid var(--accent-color);
-            z-index: 1000;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #222831; padding: 8px 14px;
+            border-top: 2px solid var(--accent-color); z-index: 1000; display: none;
         }
-        .timer-display { font-size: 20px; font-weight: bold; font-family: monospace; }
+        .timer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .timer-display { font-size: 22px; font-weight: bold; font-family: monospace; }
+        .timer-controls { display: flex; gap: 6px; }
+        .timer-controls button { width: auto; flex: 1; padding: 8px; font-size: 13px; background: #393e46; color: var(--text-color); }
+        .timer-controls button.skip { background: var(--accent-color); color: #111; }
         .tempo-tag { background: #393e46; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--warning-color); }
-        
-        /* Стили для истории */
+
         .history-item {
-            border-left: 3px solid var(--accent-color);
-            background: #252525;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            font-size: 14px;
+            border-left: 3px solid var(--accent-color); background: #252525;
+            padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 14px;
         }
-        .history-date { font-weight: bold; color: var(--warning-color); margin-bottom: 5px;}
+        .history-head { display: flex; justify-content: space-between; align-items: flex-start; }
+        .history-date { font-weight: bold; color: var(--warning-color); margin-bottom: 5px; }
         .rest-badge { color: var(--accent-color); font-size: 11px; font-weight: bold; font-family: monospace; }
+        .btn-del { background: transparent; border: none; color: var(--danger-color); width: auto; padding: 0 4px; font-size: 16px; }
+
+        .small-btn { width: auto; padding: 6px 10px; font-size: 12px; }
+        .row-flex { display: flex; gap: 8px; }
+        .row-flex > * { flex: 1; }
+        label { display: block; margin: 4px 0; color: var(--text-muted); font-size: 14px; }
+        .log-item {
+            background: #252525; border-left: 3px solid var(--accent-color);
+            padding: 8px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 14px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .stopwatch { font-family: monospace; font-size: 28px; text-align: center; margin: 10px 0; color: var(--warning-color); }
     </style>
 </head>
 <body>
 
-    <div class="workout-section">
-        <h2>🔥 Новая тренировка</h2>
-        <label for="muscle-group">Выбери целевую группу:</label>
-        <select id="muscle-group" onchange="resetAndRender()" style="margin-top: 5px; margin-bottom: 15px;">
-            <option value="Грудь">Грудь</option>
-            <option value="Спина">Спина</option>
-            <option value="Ноги">Ноги</option>
-        </select>
-        <div id="general-timer">Время сессии: 00:00</div>
+    <div class="tabs">
+        <button id="tab-btn-workout" class="active" onclick="showTab('workout')">🏋️ Тренировка</button>
+        <button id="tab-btn-water" onclick="showTab('water')">💧 Вода</button>
+        <button id="tab-btn-weight" onclick="showTab('weight')">⚖️ Вес</button>
+        <button id="tab-btn-sauna" onclick="showTab('sauna')">🧖 Сауна</button>
+        <button id="tab-btn-pool" onclick="showTab('pool')">🏊 Бассейн</button>
     </div>
 
-    <div class="workout-section" id="workout-content">
-        <div id="exercises-container"></div>
-        <button onclick="saveWorkout()" style="background-color: var(--success-color); margin-top: 15px;">Завершить и сохранить тренировку</button>
-    </div>
-
-    <div class="workout-section">
-        <h3>📜 История тренировок</h3>
-        <div id="history-container" style="max-height: 300px; overflow-y: auto;">
-            <span style="color: var(--text-muted);">История пока пуста.</span>
+    <!-- ============ ТРЕНИРОВКА ============ -->
+    <div id="tab-workout" class="tab-content">
+        <div class="workout-section" id="session-start">
+            <h2>🏋️ Тренировка</h2>
+            <p style="color: var(--text-muted);">Сессия не запущена. Время начнёт считаться после нажатия.</p>
+            <button onclick="startSession()" style="background-color: var(--success-color);">▶ Начать сессию</button>
         </div>
-        <button onclick="clearHistory()" style="background-color: #d9534f; margin-top: 15px; padding: 6px; font-size: 12px; width: auto;">Очистить историю</button>
+
+        <div id="session-active" style="display:none;">
+            <div class="workout-section">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="general-timer">Время сессии: 00:00</span>
+                    <span>Σ Объём: <span class="vol-tag" id="session-volume">0 кг</span></span>
+                </div>
+                <hr style="border: 0.5px solid #333; margin: 12px 0;">
+                <label>Группа мышц:</label>
+                <select id="muscle-group" onchange="populateExercises()">
+                    <option value="Грудь">Грудь</option>
+                    <option value="Спина">Спина</option>
+                    <option value="Ноги">Ноги</option>
+                    <option value="Руки">Руки</option>
+                </select>
+                <label style="margin-top:10px;">Упражнение:</label>
+                <select id="exercise-select"></select>
+                <div class="row-flex" style="margin-top:10px;">
+                    <button onclick="addExercise()">＋ Добавить упражнение</button>
+                    <button style="background:#393e46; flex:0 0 35%;" onclick="addCustomExercise()">✎ Своё…</button>
+                </div>
+            </div>
+
+            <div id="exercises-container"></div>
+
+            <div class="row-flex" style="margin-bottom: 15px;">
+                <button onclick="saveWorkout()" style="background-color: var(--success-color);">✅ Завершить и сохранить</button>
+                <button onclick="cancelSession()" style="background-color: var(--danger-color); flex:0 0 35%;">✕ Отмена</button>
+            </div>
+        </div>
+
+        <div class="workout-section">
+            <h3>📜 История тренировок</h3>
+            <div id="history-container" style="max-height: 320px; overflow-y: auto;">
+                <span style="color: var(--text-muted);">История пока пуста.</span>
+            </div>
+            <div class="row-flex" style="margin-top: 12px;">
+                <button class="small-btn" style="background:#393e46;" onclick="exportData()">⬇️ Экспорт</button>
+                <button class="small-btn" style="background:#393e46;" onclick="document.getElementById('import-file').click()">⬆️ Импорт</button>
+                <button class="small-btn" style="background-color: var(--danger-color);" onclick="clearHistory()">🗑</button>
+            </div>
+            <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
+        </div>
     </div>
 
-    <div class="timer-panel">
-        <div>⏱️ Отдых:</div>
-        <div class="timer-display" id="rest-timer">00:00</div>
+    <!-- ============ ВОДА ============ -->
+    <div id="tab-water" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>💧 Вода</h2>
+            <div>Сегодня выпито: <span class="vol-tag" id="water-today">0 мл</span></div>
+            <div class="row-flex" style="margin-top:12px;">
+                <button onclick="addWater(250)">+250</button>
+                <button onclick="addWater(500)">+500</button>
+                <button onclick="addWater(750)">+750</button>
+            </div>
+            <div class="row-flex" style="margin-top:10px;">
+                <input id="water-input" type="number" inputmode="decimal" placeholder="мл вручную">
+                <button class="small-btn" style="flex:0 0 35%;" onclick="addWaterManual()">Добавить</button>
+            </div>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="water-history"></div>
+        </div>
+    </div>
+
+    <!-- ============ ВЕС ============ -->
+    <div id="tab-weight" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>⚖️ Сухой вес</h2>
+            <div>Последний: <span class="vol-tag" id="weight-last">—</span></div>
+            <div class="row-flex" style="margin-top:12px;">
+                <input id="weight-input" type="number" inputmode="decimal" placeholder="кг">
+                <button class="small-btn" style="flex:0 0 35%;" onclick="addWeight()">Записать</button>
+            </div>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="weight-history"></div>
+        </div>
+    </div>
+
+    <!-- ============ САУНА ============ -->
+    <div id="tab-sauna" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>🧖 Сауна</h2>
+            <div class="stopwatch" id="sauna-stopwatch">00:00</div>
+            <div class="row-flex">
+                <button id="sauna-sw-btn" onclick="toggleSaunaTimer()">▶ Старт секундомера</button>
+            </div>
+            <div class="row-flex" style="margin-top:10px;">
+                <input id="sauna-input" type="number" inputmode="decimal" placeholder="минут">
+                <button class="small-btn" style="flex:0 0 35%;" onclick="addSauna()">Записать</button>
+            </div>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="sauna-history"></div>
+        </div>
+    </div>
+
+    <!-- ============ БАССЕЙН ============ -->
+    <div id="tab-pool" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>🏊 Бассейн</h2>
+            <label>Дистанция (метры):</label>
+            <input id="pool-meters" type="number" inputmode="decimal" placeholder="метры">
+            <label style="margin-top:10px;">Время заплыва:</label>
+            <div class="row-flex">
+                <input id="pool-min" type="number" inputmode="decimal" placeholder="мин">
+                <input id="pool-sec" type="number" inputmode="decimal" placeholder="сек">
+            </div>
+            <button onclick="addPool()" style="margin-top:12px;">Записать заплыв</button>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="pool-history"></div>
+        </div>
+    </div>
+
+    <!-- ============ ПАНЕЛЬ ТАЙМЕРА ОТДЫХА ============ -->
+    <div class="timer-panel" id="timer-panel">
+        <div class="timer-top">
+            <div>⏱️ Отдых</div>
+            <div class="timer-display" id="rest-timer">00:00</div>
+        </div>
+        <div class="timer-controls">
+            <button onclick="adjustRest(-30)">−30с</button>
+            <button class="skip" onclick="skipRest()">Пропустить</button>
+            <button onclick="adjustRest(30)">+30с</button>
+        </div>
     </div>
 
     <script>
-        const exercisesDatabase = {
+        // ===================== ХРАНИЛИЩЕ =====================
+        const DEFAULT_DB = {
             "Грудь": ["Жим штанги лежа", "Разведение гантелей на наклонной лавке"],
             "Спина": ["Подтягивания / Тяга верхнего блока", "Тяга штанги в наклоне"],
-            "Ноги": ["Приседания со штангой", "Румынская тяга (Мертвая тяга)"]
+            "Ноги":  ["Приседания со штангой", "Румынская тяга (Мертвая тяга)"],
+            "Руки":  ["Подъём штанги на бицепс", "Французский жим (трицепс)"]
         };
+        const LS = {
+            history: 'workout_history',
+            custom:  'custom_exercises',
+            water:   'water_log',
+            weight:  'bodyweight_log',
+            sauna:   'sauna_log',
+            pool:    'pool_log'
+        };
+        const get = (k) => JSON.parse(localStorage.getItem(k) || '[]');
+        const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        const getCustom = () => JSON.parse(localStorage.getItem(LS.custom) || '{}');
+        const setCustom = (c) => localStorage.setItem(LS.custom, JSON.stringify(c));
 
-        let startTime = Date.now();
-        let lastSetTime = Date.now(); // Метка времени для отслеживания пауз между подходами
+        function getDB() {
+            const custom = getCustom();
+            const db = {};
+            for (const g of Object.keys(DEFAULT_DB)) db[g] = [...DEFAULT_DB[g], ...(custom[g] || [])];
+            return db;
+        }
+
+        // ===================== ВКЛАДКИ =====================
+        let currentTab = 'workout';
+        function showTab(name) {
+            currentTab = name;
+            ['workout', 'water', 'weight', 'sauna', 'pool'].forEach(t => {
+                document.getElementById('tab-' + t).style.display = (t === name) ? 'block' : 'none';
+                document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+            });
+            updateTimerPanel();
+        }
+
+        // ===================== ОБЩИЕ ХЕЛПЕРЫ =====================
+        function todayKey() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        function nowStamp() {
+            return {
+                id: Date.now(),
+                ts: Date.now(),
+                day: todayKey(),
+                date: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+            };
+        }
+        function fmtTime(sec) {
+            sec = Math.round(sec);
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+        function setVolume(sets) {
+            return (sets || []).reduce((sum, s) => sum + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0);
+        }
+
+        // ===================== ТАЙМЕРЫ ТРЕНИРОВКИ =====================
+        let sessionActive = false;
+        let startTime = 0;
+        let lastSetTime = 0;
         let restEndTime = null;
         let restInterval = null;
+        let audioCtx = null;
 
-        // Глобальный таймер сессии
         setInterval(() => {
-            let elapsed = Math.floor((Date.now() - startTime) / 1000);
-            let mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            let secs = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('general-timer').innerText = `Время сессии: ${mins}:${secs}`;
+            if (!sessionActive) return;
+            const el = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('general-timer').innerText =
+                `Время сессии: ${String(Math.floor(el / 60)).padStart(2, '0')}:${String(el % 60).padStart(2, '0')}`;
         }, 1000);
 
-        function renderExercises() {
+        function updateTimerPanel() {
+            document.getElementById('timer-panel').style.display =
+                (currentTab === 'workout' && sessionActive) ? 'block' : 'none';
+        }
+
+        function startSession() {
+            sessionActive = true;
+            startTime = Date.now();
+            lastSetTime = Date.now();
+            document.getElementById('session-start').style.display = 'none';
+            document.getElementById('session-active').style.display = 'block';
+            document.getElementById('exercises-container').innerHTML = '';
+            document.getElementById('general-timer').innerText = 'Время сессии: 00:00';
+            populateExercises();
+            recalcVolume();
+            updateTimerPanel();
+        }
+        function endSessionUI() {
+            sessionActive = false;
+            document.getElementById('session-start').style.display = 'block';
+            document.getElementById('session-active').style.display = 'none';
+            document.getElementById('exercises-container').innerHTML = '';
+            skipRest();
+            updateTimerPanel();
+        }
+        function cancelSession() {
+            if (!confirm('Отменить сессию? Несохранённые данные пропадут.')) return;
+            endSessionUI();
+        }
+
+        // ===================== ВЫБОР УПРАЖНЕНИЙ =====================
+        function populateExercises() {
             const group = document.getElementById('muscle-group').value;
-            const exercises = exercisesDatabase[group];
-            let html = '';
+            const sel = document.getElementById('exercise-select');
+            sel.innerHTML = (getDB()[group] || []).map(n => `<option value="${n}">${n}</option>`).join('');
+        }
 
-            exercises.forEach((exName) => {
-                html += `
-                <div class="exercise-card" data-name="${exName}">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="font-size: 18px; color: var(--accent-color);">${exName}</h3>
-                        <span class="tempo-tag">3-0-1-0</span>
-                    </div>
-                    <hr style="border: 0.5px solid #333; margin: 10px 0;">
+        function addCustomExercise() {
+            const group = document.getElementById('muscle-group').value;
+            const name = (prompt(`Название упражнения для группы "${group}":`) || '').trim();
+            if (!name) return;
+            if (getDB()[group].includes(name)) { alert('Такое упражнение уже есть.'); return; }
+            const custom = getCustom();
+            custom[group] = custom[group] || [];
+            custom[group].push(name);
+            setCustom(custom);
+            populateExercises();
+            document.getElementById('exercise-select').value = name;
+        }
 
-                    <h4>🔄 Разминочные подходы (Отдых 90с)</h4>
-                    <div class="set-header"><span>Вес</span><span>Повт</span><span>-</span><span>-</span><span>Ок</span></div>
-                    ${[1, 2].map(() => `
-                        <div class="set-row warmup-row">
-                            <input type="number" placeholder="кг" class="inp-w">
-                            <input type="number" placeholder="раз" class="inp-r">
-                            <span>-</span><span>-</span>
-                            <button class="btn-check" onclick="completeSet(this, 90)">✓</button>
-                        </div>
-                    `).join('')}
+        function addExercise() {
+            if (!sessionActive) return;
+            const group = document.getElementById('muscle-group').value;
+            const name = document.getElementById('exercise-select').value;
+            if (!name) return;
+            const exists = [...document.querySelectorAll('.exercise-card')].some(c => c.dataset.name === name);
+            if (exists) { alert('Это упражнение уже добавлено в сессию.'); return; }
+            document.getElementById('exercises-container').insertAdjacentHTML('beforeend', exerciseCardHTML(name, group));
+            recalcVolume();
+        }
 
-                    <h4 style="color: var(--warning-color);">🔥 Рабочие подходы (Отдых 180с)</h4>
-                    <div class="set-header"><span>Вес</span><span>Повт</span><span>RPE</span><span>RIR</span><span>Ок</span></div>
-                    ${[1, 2, 3].map(() => `
-                        <div class="set-row working-row">
-                            <input type="number" placeholder="кг" class="inp-w">
-                            <input type="number" placeholder="раз" class="inp-r">
-                            <input type="number" placeholder="RPE" class="inp-rpe" oninput="syncRpeRir(this, 'rir')">
-                            <input type="number" placeholder="RIR" class="inp-rir" oninput="syncRpeRir(this, 'rpe')">
-                            <button class="btn-check" onclick="completeSet(this, 180)">✓</button>
-                        </div>
-                    `).join('')}
+        // ===================== ШАБЛОНЫ ПОДХОДОВ =====================
+        function warmupRowHTML(phW = 'кг', phR = 'раз') {
+            return `
+                <div class="set-row warmup-row">
+                    <input type="number" inputmode="decimal" placeholder="${phW}" class="inp-w">
+                    <input type="number" inputmode="decimal" placeholder="${phR}" class="inp-r">
+                    <span>-</span><span>-</span>
+                    <button class="btn-check" onclick="completeSet(this, 90)">✓</button>
                 </div>`;
+        }
+        function workingRowHTML(phW = 'кг', phR = 'раз') {
+            return `
+                <div class="set-row working-row">
+                    <input type="number" inputmode="decimal" placeholder="${phW}" class="inp-w" oninput="recalcVolume()">
+                    <input type="number" inputmode="decimal" placeholder="${phR}" class="inp-r" oninput="recalcVolume()">
+                    <input type="number" inputmode="decimal" placeholder="RPE" class="inp-rpe" oninput="syncRpeRir(this, 'rir')">
+                    <input type="number" inputmode="decimal" placeholder="RIR" class="inp-rir" oninput="syncRpeRir(this, 'rpe')">
+                    <button class="btn-check" onclick="completeSet(this, 180)">✓</button>
+                </div>`;
+        }
+
+        function lastPerformance(name) {
+            for (const session of get(LS.history)) {
+                const ex = (session.exercises || []).find(e => e.exerciseName === name && e.working && e.working.length > 0);
+                if (ex) return { date: session.date, working: ex.working };
+            }
+            return null;
+        }
+
+        function exerciseCardHTML(name, group) {
+            const last = lastPerformance(name);
+            let lastBlock = `<div class="last-perf">Прошлый раз: данных нет — базовая точка отсчёта.</div>`;
+            if (last) {
+                const vol = setVolume(last.working);
+                const maxW = Math.max(...last.working.map(s => parseFloat(s.weight) || 0));
+                const setsStr = last.working.map(s => `${s.weight || '?'}×${s.reps || '?'}`).join(', ');
+                lastBlock = `
+                    <div class="last-perf">
+                        Прошлый раз (${last.date}): ${setsStr}<br>
+                        Объём: <span class="pr">${vol} кг</span> · Макс. вес: <span class="pr">${maxW} кг</span>
+                        <br><button class="btn-repeat" onclick="repeatLast(this)">↺ Повторить прошлые значения</button>
+                    </div>`;
+            }
+            const lastSets = last ? last.working : [];
+            const workingRows = [0, 1, 2].map(i => {
+                const s = lastSets[i];
+                return workingRowHTML(s ? (s.weight || 'кг') : 'кг', s ? (s.reps || 'раз') : 'раз');
+            }).join('');
+
+            return `
+            <div class="exercise-card" data-name="${name}" data-group="${group}">
+                <div class="ex-head">
+                    <h3 style="font-size: 18px; color: var(--accent-color);">${name}</h3>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span class="tempo-tag">3-0-1-0</span>
+                        <button class="btn-remove-ex" onclick="removeExercise(this)" title="Убрать упражнение">✕</button>
+                    </div>
+                </div>
+                ${lastBlock}
+                <hr style="border: 0.5px solid #333; margin: 10px 0;">
+
+                <h4>🔄 Разминка (Отдых 90с)</h4>
+                <div class="set-header"><span>Вес</span><span>Повт</span><span>-</span><span>-</span><span>Ок</span></div>
+                <div class="warmup-sets">${warmupRowHTML()}${warmupRowHTML()}</div>
+                <div class="set-controls">
+                    <button onclick="addSet(this, 'warmup')">＋ подход</button>
+                    <button onclick="removeSet(this, 'warmup')">－ убрать</button>
+                </div>
+
+                <h4 style="color: var(--warning-color);">🔥 Рабочие (Отдых 180с) · <span class="vol-tag card-vol">0 кг</span></h4>
+                <div class="set-header"><span>Вес</span><span>Повт</span><span>RPE</span><span>RIR</span><span>Ок</span></div>
+                <div class="working-sets">${workingRows}</div>
+                <div class="set-controls">
+                    <button onclick="addSet(this, 'working')">＋ подход</button>
+                    <button onclick="removeSet(this, 'working')">－ убрать</button>
+                </div>
+            </div>`;
+        }
+
+        function removeExercise(btn) {
+            btn.closest('.exercise-card').remove();
+            recalcVolume();
+        }
+        function addSet(btn, type) {
+            const card = btn.closest('.exercise-card');
+            const c = card.querySelector(type === 'warmup' ? '.warmup-sets' : '.working-sets');
+            c.insertAdjacentHTML('beforeend', type === 'warmup' ? warmupRowHTML() : workingRowHTML());
+        }
+        function removeSet(btn, type) {
+            const card = btn.closest('.exercise-card');
+            const c = card.querySelector(type === 'warmup' ? '.warmup-sets' : '.working-sets');
+            if (c.children.length > 1) { c.removeChild(c.children[c.children.length - 1]); recalcVolume(); }
+        }
+        function repeatLast(btn) {
+            const card = btn.closest('.exercise-card');
+            const last = lastPerformance(card.dataset.name);
+            if (!last) return;
+            const c = card.querySelector('.working-sets');
+            while (c.children.length < last.working.length) c.insertAdjacentHTML('beforeend', workingRowHTML());
+            const rows = c.querySelectorAll('.working-row');
+            last.working.forEach((s, i) => {
+                if (!rows[i]) return;
+                rows[i].querySelector('.inp-w').value = s.weight || '';
+                rows[i].querySelector('.inp-r').value = s.reps || '';
             });
-
-            document.getElementById('exercises-container').innerHTML = html;
+            recalcVolume();
         }
 
-        function resetAndRender() {
-            lastSetTime = Date.now(); // Сбрасываем интервал отдыха при смене группы мышц
-            renderExercises();
+        function recalcVolume() {
+            let total = 0;
+            document.querySelectorAll('.exercise-card').forEach(card => {
+                let v = 0;
+                card.querySelectorAll('.working-row').forEach(row => {
+                    v += (parseFloat(row.querySelector('.inp-w').value) || 0) * (parseFloat(row.querySelector('.inp-r').value) || 0);
+                });
+                const tag = card.querySelector('.card-vol');
+                if (tag) tag.innerText = `${v} кг`;
+                total += v;
+            });
+            const sv = document.getElementById('session-volume');
+            if (sv) sv.innerText = `${total} кг`;
         }
 
-        // Клик по кнопке выполнения подхода
-        function completeSet(btn, restDurationSeconds) {
+        // ===================== ОТДЫХ / ЗВУК =====================
+        function ensureAudio() {
+            if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+        }
+        function beep() {
+            if (!audioCtx) return;
+            try {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.value = 880; o.type = 'sine';
+                g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                o.start(); o.stop(audioCtx.currentTime + 0.4);
+            } catch (e) {}
+        }
+        function completeSet(btn, restSec) {
+            ensureAudio();
             btn.classList.toggle('done');
-            
             if (btn.classList.contains('done')) {
                 btn.innerText = '⚙';
-                
-                // Считаем реальный чистый отдых с момента предыдущего клика
-                let now = Date.now();
-                let elapsedSeconds = Math.floor((now - lastSetTime) / 1000);
-                let mins = Math.floor(elapsedSeconds / 60);
-                let secs = elapsedSeconds % 60;
-                let formattedRest = `${mins}:${String(secs).padStart(2, '0')}`;
-                
-                // Сохраняем это время прямо на кнопку, чтобы забрать при сохранении
-                btn.setAttribute('data-actual-rest', formattedRest);
-                
-                // Передвигаем метку времени на текущий момент
+                const now = Date.now();
+                const el = Math.floor((now - lastSetTime) / 1000);
+                btn.setAttribute('data-actual-rest', `${Math.floor(el / 60)}:${String(el % 60).padStart(2, '0')}`);
                 lastSetTime = now;
-                
-                startRestTimer(restDurationSeconds);
+                startRestTimer(restSec);
             } else {
                 btn.innerText = '✓';
                 btn.removeAttribute('data-actual-rest');
             }
         }
-
         function startRestTimer(seconds) {
             restEndTime = Date.now() + seconds * 1000;
             if (restInterval) clearInterval(restInterval);
-
-            restInterval = setInterval(() => {
-                let remaining = Math.ceil((restEndTime - Date.now()) / 1000);
-                if (remaining <= 0) {
-                    clearInterval(restInterval);
-                    document.getElementById('rest-timer').innerText = "00:00";
-                    document.getElementById('rest-timer').style.color = "var(--success-color)";
+            const display = document.getElementById('rest-timer');
+            const tick = () => {
+                const r = Math.ceil((restEndTime - Date.now()) / 1000);
+                if (r <= 0) {
+                    clearInterval(restInterval); restInterval = null;
+                    display.innerText = "00:00"; display.style.color = "var(--success-color)";
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    beep();
                 } else {
-                    let mins = String(Math.floor(remaining / 60)).padStart(2, '0');
-                    let secs = String(remaining % 60).padStart(2, '0');
-                    document.getElementById('rest-timer').innerText = `${mins}:${secs}`;
-                    document.getElementById('rest-timer').style.color = "var(--warning-color)";
+                    display.innerText = `${String(Math.floor(r / 60)).padStart(2, '0')}:${String(r % 60).padStart(2, '0')}`;
+                    display.style.color = "var(--warning-color)";
                 }
-            }, 500);
+            };
+            tick();
+            restInterval = setInterval(tick, 500);
         }
-
-        function syncRpeRir(input, targetType) {
-            let val = parseFloat(input.value);
-            let row = input.parentElement;
-            let rpeInput = row.querySelector('.inp-rpe');
-            let rirInput = row.querySelector('.inp-rir');
-
+        function adjustRest(delta) {
+            if (!restInterval) return;
+            restEndTime += delta * 1000;
+            if (restEndTime < Date.now()) restEndTime = Date.now();
+        }
+        function skipRest() {
+            if (restInterval) { clearInterval(restInterval); restInterval = null; }
+            const d = document.getElementById('rest-timer');
+            d.innerText = "00:00"; d.style.color = "var(--text-muted)";
+        }
+        function syncRpeRir(input, target) {
+            const val = parseFloat(input.value);
+            const row = input.parentElement;
+            const rpe = row.querySelector('.inp-rpe'), rir = row.querySelector('.inp-rir');
             if (isNaN(val)) return;
-
-            if (targetType === 'rir' && input === rpeInput) {
-                rirInput.value = Math.max(0, 10 - val);
-            } else if (targetType === 'rpe' && input === rirInput) {
-                rpeInput.value = Math.max(0, 10 - val);
-            }
+            if (target === 'rir' && input === rpe) rir.value = Math.max(0, 10 - val);
+            else if (target === 'rpe' && input === rir) rpe.value = Math.max(0, 10 - val);
         }
 
+        // ===================== СОХРАНЕНИЕ ТРЕНИРОВКИ =====================
         function saveWorkout() {
-            const group = document.getElementById('muscle-group').value;
-            const exerciseCards = document.querySelectorAll('.exercise-card');
+            const cards = document.querySelectorAll('#exercises-container .exercise-card');
             const exercisesData = [];
+            const groups = new Set();
 
-            exerciseCards.forEach(card => {
-                const name = card.getAttribute('data-name');
-                const warmupSets = [];
-                const workingSets = [];
-
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                groups.add(card.dataset.group);
+                const warmup = [], working = [];
                 card.querySelectorAll('.warmup-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value;
-                    const r = row.querySelector('.inp-r').value;
-                    const restTime = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
-                    if(w || r) warmupSets.push({ weight: w, reps: r, rest: restTime });
+                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
+                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
+                    if (w || r) warmup.push({ weight: w, reps: r, rest });
                 });
-
                 card.querySelectorAll('.working-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value;
-                    const r = row.querySelector('.inp-r').value;
-                    const rpe = row.querySelector('.inp-rpe').value;
-                    const rir = row.querySelector('.inp-rir').value;
-                    const restTime = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
-                    if(w || r) workingSets.push({ weight: w, reps: r, rpe: rpe, rir: rir, tempo: '3-0-1-0', rest: restTime });
+                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
+                    const rpe = row.querySelector('.inp-rpe').value, rir = row.querySelector('.inp-rir').value;
+                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
+                    if (w || r) working.push({ weight: w, reps: r, rpe, rir, tempo: '3-0-1-0', rest });
                 });
-
-                exercisesData.push({
-                    exerciseName: name,
-                    warmup: warmupSets,
-                    working: workingSets
-                });
+                if (warmup.length || working.length) exercisesData.push({ exerciseName: name, warmup, working });
             });
 
-            const workoutSession = {
-                date: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                muscleGroup: group,
-                exercises: exercisesData
+            if (exercisesData.length === 0) { alert('Нечего сохранять: заполни хотя бы один подход.'); return; }
+
+            const totalVolume = exercisesData.reduce((s, ex) => s + setVolume(ex.working), 0);
+            const durationSec = Math.floor((Date.now() - startTime) / 1000);
+            const session = {
+                id: Date.now(),
+                date: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                muscleGroup: [...groups].join(', '),
+                durationSec, totalVolume, exercises: exercisesData
             };
+            const h = get(LS.history); h.unshift(session); set(LS.history, h);
 
-            let history = JSON.parse(localStorage.getItem('workout_history')) || [];
-            history.unshift(workoutSession);
-            localStorage.setItem('workout_history', JSON.stringify(history));
-
+            endSessionUI();
             renderHistory();
-            renderExercises();
-            lastSetTime = Date.now(); // Сброс таймера для следующей сессии
-
-            setTimeout(() => {
-                alert('Тренировка успешно сохранена!');
-            }, 50);
+            setTimeout(() => alert('Тренировка сохранена! Объём: ' + totalVolume + ' кг'), 50);
         }
 
         function renderHistory() {
-            const history = JSON.parse(localStorage.getItem('workout_history')) || [];
-            const container = document.getElementById('history-container');
-
-            if (history.length === 0) {
-                container.innerHTML = '<span style="color: var(--text-muted);">История пока пуста.</span>';
-                return;
-            }
-
+            const history = get(LS.history);
+            const c = document.getElementById('history-container');
+            if (history.length === 0) { c.innerHTML = '<span style="color: var(--text-muted);">История пока пуста.</span>'; return; }
             let html = '';
-            history.forEach(session => {
-                if (!session.exercises || !Array.isArray(session.exercises)) return; 
-
-                let hasContent = session.exercises.some(ex => ex.warmup.length > 0 || ex.working.length > 0);
-                if (!hasContent) return;
-
-                html += `<div class="history-item">
-                    <div class="history-date">📅 ${session.date} — Группа: ${session.muscleGroup}</div>`;
-                
-                session.exercises.forEach(ex => {
-                    if (ex.warmup.length === 0 && ex.working.length === 0) return;
-
-                    html += `<div style="margin-left: 10px; margin-top: 5px;"><strong>${ex.exerciseName}</strong>`;
-                    
-                    if(ex.warmup.length > 0) {
-                        html += `<br><span style="color:var(--text-muted); font-size:12px;">Разминка:</span> ` + 
-                            ex.warmup.map(s => `${s.weight}кг×${s.reps} <span class="rest-badge">⏱️${s.rest}</span>`).join(' | ');
-                    }
-                    if(ex.working.length > 0) {
-                        html += `<br><span style="color:var(--warning-color); font-size:12px;">Рабочие:</span> ` + 
-                            ex.working.map(s => `${s.weight}кг×${s.reps} (RPE:${s.rpe}/RIR:${s.rir}) <span class="rest-badge">⏱️${s.rest}</span>`).join(' | ');
-                    }
+            history.forEach(s => {
+                if (!s.exercises || !Array.isArray(s.exercises)) return;
+                if (!s.exercises.some(ex => (ex.warmup && ex.warmup.length) || (ex.working && ex.working.length))) return;
+                const vol = (s.totalVolume != null) ? s.totalVolume : s.exercises.reduce((a, ex) => a + setVolume(ex.working), 0);
+                const dur = s.durationSec != null ? ` · ⏳ ${fmtTime(s.durationSec)}` : '';
+                html += `<div class="history-item"><div class="history-head">
+                    <div class="history-date">📅 ${s.date} — ${s.muscleGroup}<br><span class="vol-tag">Σ ${vol} кг</span>${dur}</div>
+                    <button class="btn-del" onclick="deleteEntry('${LS.history}', '${s.id != null ? s.id : ''}')">✕</button></div>`;
+                s.exercises.forEach(ex => {
+                    const warm = ex.warmup || [], work = ex.working || [];
+                    if (!warm.length && !work.length) return;
+                    html += `<div style="margin-left:10px; margin-top:5px;"><strong>${ex.exerciseName}</strong>`;
+                    if (warm.length) html += `<br><span style="color:var(--text-muted); font-size:12px;">Разминка:</span> ` +
+                        warm.map(x => `${x.weight}кг×${x.reps} <span class="rest-badge">⏱️${x.rest}</span>`).join(' | ');
+                    if (work.length) html += `<br><span style="color:var(--warning-color); font-size:12px;">Рабочие:</span> ` +
+                        work.map(x => `${x.weight}кг×${x.reps} (RPE:${x.rpe}/RIR:${x.rir}) <span class="rest-badge">⏱️${x.rest}</span>`).join(' | ');
                     html += `</div>`;
                 });
-
                 html += `</div>`;
             });
-
-            container.innerHTML = html || '<span style="color: var(--text-muted);">История пока пуста.</span>';
+            c.innerHTML = html || '<span style="color: var(--text-muted);">История пока пуста.</span>';
         }
 
+        function deleteEntry(key, id) {
+            if (!id) return;
+            if (!confirm('Удалить запись?')) return;
+            set(key, get(key).filter(x => String(x.id) !== String(id)));
+            renderAll();
+        }
         function clearHistory() {
-            if (confirm('Вы точно хотите полностью очистить историю тренировок?')) {
-                localStorage.removeItem('workout_history');
+            if (confirm('Полностью очистить историю тренировок? (свои упражнения и другие журналы останутся)')) {
+                localStorage.removeItem(LS.history);
                 renderHistory();
             }
         }
 
-        renderExercises();
-        renderHistory();
+        // ===================== ВОДА =====================
+        function addWater(ml) {
+            const h = get(LS.water);
+            h.unshift({ ...nowStamp(), ml });
+            set(LS.water, h);
+            renderWater();
+        }
+        function addWaterManual() {
+            const v = parseFloat(document.getElementById('water-input').value);
+            if (!v || v <= 0) return;
+            document.getElementById('water-input').value = '';
+            addWater(v);
+        }
+        function renderWater() {
+            const h = get(LS.water);
+            const today = h.filter(x => x.day === todayKey()).reduce((s, x) => s + (x.ml || 0), 0);
+            document.getElementById('water-today').innerText = `${today} мл`;
+            const c = document.getElementById('water-history');
+            c.innerHTML = h.length ? h.map(x =>
+                `<div class="log-item"><span>💧 +${x.ml} мл · <span style="color:var(--text-muted)">${x.date}</span></span>
+                 <button class="btn-del" onclick="deleteEntry('${LS.water}','${x.id}')">✕</button></div>`).join('')
+                : '<span style="color:var(--text-muted)">Пусто.</span>';
+        }
+
+        // ===================== ВЕС =====================
+        function addWeight() {
+            const v = parseFloat(document.getElementById('weight-input').value);
+            if (!v || v <= 0) return;
+            document.getElementById('weight-input').value = '';
+            const h = get(LS.weight);
+            h.unshift({ ...nowStamp(), kg: v });
+            set(LS.weight, h);
+            renderWeight();
+        }
+        function renderWeight() {
+            const h = get(LS.weight);
+            document.getElementById('weight-last').innerText = h.length ? `${h[0].kg} кг` : '—';
+            const c = document.getElementById('weight-history');
+            c.innerHTML = h.length ? h.map((x, i) => {
+                const older = h[i + 1];
+                let delta = '';
+                if (older) {
+                    const d = +(x.kg - older.kg).toFixed(2);
+                    if (d > 0) delta = ` <span style="color:var(--warning-color)">▲${d}</span>`;
+                    else if (d < 0) delta = ` <span style="color:var(--success-color)">▼${Math.abs(d)}</span>`;
+                    else delta = ` <span style="color:var(--text-muted)">=</span>`;
+                }
+                return `<div class="log-item"><span>⚖️ ${x.kg} кг${delta} · <span style="color:var(--text-muted)">${x.date}</span></span>
+                        <button class="btn-del" onclick="deleteEntry('${LS.weight}','${x.id}')">✕</button></div>`;
+            }).join('') : '<span style="color:var(--text-muted)">Пусто.</span>';
+        }
+
+        // ===================== САУНА =====================
+        let saunaSwStart = null, saunaSwInterval = null;
+        function toggleSaunaTimer() {
+            const btn = document.getElementById('sauna-sw-btn');
+            const disp = document.getElementById('sauna-stopwatch');
+            if (saunaSwInterval) {
+                clearInterval(saunaSwInterval); saunaSwInterval = null;
+                const el = Math.floor((Date.now() - saunaSwStart) / 1000);
+                document.getElementById('sauna-input').value = Math.max(1, Math.round(el / 60));
+                btn.innerText = '▶ Старт секундомера';
+                saunaSwStart = null;
+            } else {
+                saunaSwStart = Date.now();
+                btn.innerText = '⏹ Стоп (запишет минуты)';
+                saunaSwInterval = setInterval(() => {
+                    const el = Math.floor((Date.now() - saunaSwStart) / 1000);
+                    disp.innerText = `${String(Math.floor(el / 60)).padStart(2, '0')}:${String(el % 60).padStart(2, '0')}`;
+                }, 500);
+            }
+        }
+        function addSauna() {
+            const v = parseFloat(document.getElementById('sauna-input').value);
+            if (!v || v <= 0) return;
+            document.getElementById('sauna-input').value = '';
+            document.getElementById('sauna-stopwatch').innerText = '00:00';
+            const h = get(LS.sauna);
+            h.unshift({ ...nowStamp(), minutes: v });
+            set(LS.sauna, h);
+            renderSauna();
+        }
+        function renderSauna() {
+            const h = get(LS.sauna);
+            const c = document.getElementById('sauna-history');
+            c.innerHTML = h.length ? h.map(x =>
+                `<div class="log-item"><span>🧖 ${x.minutes} мин · <span style="color:var(--text-muted)">${x.date}</span></span>
+                 <button class="btn-del" onclick="deleteEntry('${LS.sauna}','${x.id}')">✕</button></div>`).join('')
+                : '<span style="color:var(--text-muted)">Пусто.</span>';
+        }
+
+        // ===================== БАССЕЙН =====================
+        function addPool() {
+            const meters = parseFloat(document.getElementById('pool-meters').value);
+            const min = parseFloat(document.getElementById('pool-min').value) || 0;
+            const sec = parseFloat(document.getElementById('pool-sec').value) || 0;
+            const timeSec = min * 60 + sec;
+            if (!meters || meters <= 0 || timeSec <= 0) { alert('Укажи дистанцию и время.'); return; }
+            document.getElementById('pool-meters').value = '';
+            document.getElementById('pool-min').value = '';
+            document.getElementById('pool-sec').value = '';
+            const h = get(LS.pool);
+            h.unshift({ ...nowStamp(), meters, timeSec });
+            set(LS.pool, h);
+            renderPool();
+        }
+        function renderPool() {
+            const h = get(LS.pool);
+            const c = document.getElementById('pool-history');
+            c.innerHTML = h.length ? h.map(x => {
+                const pace = x.meters > 0 ? fmtTime(x.timeSec * 100 / x.meters) : '—';
+                return `<div class="log-item"><span>🏊 ${x.meters} м за ${fmtTime(x.timeSec)} · <span class="vol-tag">${pace}/100м</span><br>
+                        <span style="color:var(--text-muted); font-size:12px;">${x.date}</span></span>
+                        <button class="btn-del" onclick="deleteEntry('${LS.pool}','${x.id}')">✕</button></div>`;
+            }).join('') : '<span style="color:var(--text-muted)">Пусто.</span>';
+        }
+
+        // ===================== ЭКСПОРТ / ИМПОРТ (все данные) =====================
+        function exportData() {
+            const payload = {
+                version: 3, exported: new Date().toISOString(),
+                workout_history: get(LS.history),
+                custom_exercises: getCustom(),
+                water_log: get(LS.water),
+                bodyweight_log: get(LS.weight),
+                sauna_log: get(LS.sauna),
+                pool_log: get(LS.pool)
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `workout_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click(); URL.revokeObjectURL(url);
+        }
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    const replace = confirm('OK — Заменить все данные.\nОтмена — Добавить к текущим (слияние).');
+                    const merge = (key, incoming) => {
+                        if (!Array.isArray(incoming)) return;
+                        if (replace) { set(key, incoming); return; }
+                        const merged = [...get(key), ...incoming];
+                        const seen = new Set();
+                        const dedup = merged.filter(x => {
+                            if (x.id == null) return true;
+                            if (seen.has(x.id)) return false;
+                            seen.add(x.id); return true;
+                        });
+                        dedup.sort((a, b) => (b.id || 0) - (a.id || 0));
+                        set(key, dedup);
+                    };
+                    merge(LS.history, d.workout_history || (Array.isArray(d) ? d : []));
+                    merge(LS.water, d.water_log);
+                    merge(LS.weight, d.bodyweight_log);
+                    merge(LS.sauna, d.sauna_log);
+                    merge(LS.pool, d.pool_log);
+                    if (d.custom_exercises) {
+                        const cur = getCustom();
+                        for (const g of Object.keys(d.custom_exercises))
+                            cur[g] = Array.from(new Set([...(cur[g] || []), ...d.custom_exercises[g]]));
+                        setCustom(cur);
+                    }
+                    renderAll();
+                    alert('Импорт завершён.');
+                } catch (err) { alert('Не удалось прочитать файл: неверный формат.'); }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        // ===================== СТАРТ =====================
+        function renderAll() {
+            renderHistory(); renderWater(); renderWeight(); renderSauna(); renderPool();
+            if (sessionActive) populateExercises();
+        }
+        renderAll();
+        showTab('workout');
     </script>
 </body>
 </html>
