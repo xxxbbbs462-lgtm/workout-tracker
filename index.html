@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#121212">
     <link rel="apple-touch-icon" href="icon.png">
     
-    <title>Локальный Трекер Тренировок</title>
+    <title>Локальный Трекер Тренировок • Прогрессия</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --accent-color: #00adb5;
@@ -92,7 +92,6 @@
         .timer-controls button { width: auto; flex: 1; padding: 8px; font-size: 13px; background: #393e46; color: var(--text-color); }
         .timer-controls button.skip { background: var(--accent-color); color: #111; }
 
-        /* История */
         .day-header { color: var(--warning-color); font-size: 15px; margin: 18px 0 8px; font-weight: bold; }
         .day-block:first-child .day-header { margin-top: 4px; }
         .ev-item {
@@ -125,10 +124,94 @@
         .progress-bar-bg { background: #333; border-radius: 6px; height: 12px; width: 100%; overflow: hidden; margin-top: 5px; }
         .progress-bar-fill { background: #4aa3ff; height: 100%; width: 0%; transition: width 0.4s ease; }
 
-        /* Календарь активности */
         .calendar-wrap { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; margin-top: 10px; }
         .cal-day { aspect-ratio: 1; border-radius: 3px; background: #333; position: relative; }
         .cal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+
+        /* === НОВЫЕ СТИЛИ ДЛЯ ПРОГРЕССИИ === */
+        .suggestion-box {
+            background: #1f2a2e;
+            border: 1px solid #00adb5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .suggestion-box .title {
+            color: #00adb5;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .plateau-badge {
+            background: #d9534f;
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .pr-badge {
+            background: #ffd369;
+            color: #111;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        /* PR Modal */
+        .pr-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .pr-modal-content {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 420px;
+            width: 92%;
+            text-align: center;
+            border: 2px solid #ffd369;
+        }
+        .pr-modal-content h2 {
+            color: #ffd369;
+            margin: 0 0 12px 0;
+            font-size: 26px;
+        }
+        .pr-list {
+            text-align: left;
+            margin: 16px 0;
+            background: #252525;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .pr-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+        .pr-item:last-child {
+            border-bottom: none;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ffd369;
+            animation: confetti-fall 1.2s linear forwards;
+        }
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(400px) rotate(720deg);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -145,6 +228,7 @@
         <button id="tab-btn-pool" onclick="showTab('pool')">🏊 Бассейн</button>
     </div>
 
+    <!-- ==================== WORKOUT TAB ==================== -->
     <div id="tab-workout" class="tab-content">
         <div class="workout-section" id="session-start">
             <h2>🏋️ Тренировка</h2>
@@ -167,7 +251,7 @@
                 <div class="row-flex" style="align-items: flex-start;">
                     <div>
                         <label>Группа мышц:</label>
-                        <select id="muscle-group" onchange="populateExercises()">
+                        <select id="muscle-group" onchange="populateExercises() ">
                             <option value="Грудь">Грудь</option>
                             <option value="Спина">Спина</option>
                             <option value="Ноги">Ноги</option>
@@ -201,15 +285,11 @@
         </div>
     </div>
 
+    <!-- ==================== HISTORY TAB ==================== -->
     <div id="tab-history" class="tab-content" style="display:none;">
         <div class="workout-section">
-            <h2>📜 Календарь активности (30 дней)</h2>
+            <h2>📜 Календарь активности (42 дня)</h2>
             <div id="activity-calendar"></div>
-            <div style="display: flex; gap: 10px; font-size: 11px; color: var(--text-muted); margin-top: 8px; justify-content: center;">
-                <div><span style="display:inline-block; width:10px; height:10px; background:var(--success-color); border-radius:2px;"></span> Тренировка</div>
-                <div><span style="display:inline-block; width:10px; height:10px; background:#4aa3ff; border-radius:2px;"></span> Бассейн</div>
-                <div><span style="display:inline-block; width:10px; height:10px; background:#ff8a65; border-radius:2px;"></span> Сауна</div>
-            </div>
         </div>
 
         <div class="workout-section">
@@ -224,6 +304,28 @@
         <div id="history-container"></div>
     </div>
 
+    <!-- ==================== CHARTS TAB ==================== -->
+    <div id="tab-charts" class="tab-content" style="display:none;">
+        <div class="workout-section"><h2>📊 Графики прогрессии</h2></div>
+        
+        <div class="workout-section">
+            <h3>Прогрессия по упражнению (вес + 1ПМ)</h3>
+            <select id="charts-exercise-select" onchange="renderExerciseChart()"></select>
+            <div id="chart-exercise" style="margin-top:8px;"></div>
+            <div style="font-size:12px; color:#888; margin-top:6px;">
+                Синяя линия — максимальный вес<br>
+                Жёлтая линия — расчётный 1ПМ (Epley)
+            </div>
+        </div>
+        
+        <div class="workout-section"><h3>Объём по неделям (кг)</h3><div id="chart-volume"></div></div>
+        <div class="workout-section"><h3>Вес тела (кг)</h3><div id="chart-weight"></div></div>
+        <div class="workout-section"><h3>Темп в бассейне</h3><div id="chart-pool"></div></div>
+        <div class="workout-section"><h3>Вода (14 дней)</h3><div id="chart-water"></div></div>
+        <div class="workout-section"><h3>Сауна (14 дней, минут)</h3><div id="chart-sauna"></div></div>
+    </div>
+
+    <!-- ==================== OTHER TABS (unchanged) ==================== -->
     <div id="tab-water" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>💧 Вода</h2>
@@ -337,20 +439,7 @@
         </div>
     </div>
 
-    <div id="tab-charts" class="tab-content" style="display:none;">
-        <div class="workout-section"><h2>📊 Графики</h2></div>
-        <div class="workout-section">
-            <h3>Прогрессия по упражнению</h3>
-            <select id="charts-exercise-select" onchange="renderExerciseChart()"></select>
-            <div id="chart-exercise" style="margin-top:8px;"></div>
-        </div>
-        <div class="workout-section"><h3>Объём по неделям (кг)</h3><div id="chart-volume"></div></div>
-        <div class="workout-section"><h3>Вес тела (кг)</h3><div id="chart-weight"></div></div>
-        <div class="workout-section"><h3>Темп в бассейне</h3><div id="chart-pool"></div></div>
-        <div class="workout-section"><h3>Вода (14 дней)</h3><div id="chart-water"></div></div>
-        <div class="workout-section"><h3>Сауна (14 дней, минут)</h3><div id="chart-sauna"></div></div>
-    </div>
-
+    <!-- ==================== TIMER PANEL ==================== -->
     <div class="timer-panel" id="timer-panel">
         <div class="timer-top">
             <div>⏱️ Отдых</div>
@@ -363,13 +452,22 @@
         </div>
     </div>
 
+    <!-- ==================== PR MODAL ==================== -->
+    <div id="pr-modal" class="pr-modal" onclick="if (event.target.id === 'pr-modal') hidePRModal()">
+        <div class="pr-modal-content" onclick="event.stopImmediatePropagation()">
+            <h2>🎉 Новые рекорды!</h2>
+            <div id="pr-modal-list" class="pr-list"></div>
+            <button onclick="hidePRModal()" style="background:#ffd369; color:#111; margin-top:12px;">Отлично, продолжаем!</button>
+        </div>
+    </div>
+
     <script>
-        // ===================== REGISTRATION PWA =====================
+        // ===================== PWA =====================
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Registration failed', err));
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
         }
 
-        // ===================== БАЗА / ХРАНИЛИЩЕ =====================
+        // ===================== STORAGE =====================
         const DEFAULT_DB = {
             "Грудь": ["Жим штанги лежа", "Разведение гантелей на наклонной лавке"],
             "Спина": ["Подтягивания / Тяга верхнего блока", "Тяга штанги в наклоне"],
@@ -381,7 +479,8 @@
             water: 'water_log', weight: 'bodyweight_log',
             sauna: 'sauna_log', pool: 'pool_log',
             sleep: 'sleep_log', caffeine: 'caffeine_log',
-            units: 'exercise_units', draft: 'workout_draft'
+            units: 'exercise_units', draft: 'workout_draft',
+            pr_log: 'pr_log'   // NEW: PR history
         };
         const get = (k) => JSON.parse(localStorage.getItem(k) || '[]');
         const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -403,10 +502,12 @@
 
         const TABS = ['workout', 'history', 'charts', 'water', 'weight', 'sauna', 'pool', 'sleep', 'caffeine'];
         let currentTab = 'workout';
+
         function showTab(name) {
             currentTab = name;
             TABS.forEach(t => {
-                document.getElementById('tab-' + t).style.display = (t === name) ? 'block' : 'none';
+                const el = document.getElementById('tab-' + t);
+                if (el) el.style.display = (t === name) ? 'block' : 'none';
                 const btn = document.getElementById('tab-btn-' + t);
                 if (btn) btn.classList.toggle('active', t === name);
             });
@@ -416,7 +517,7 @@
             updateTimerPanel();
         }
 
-        // ===================== УТИЛИТЫ ДАТЫ =====================
+        // ===================== DATE UTILS =====================
         function todayKey() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -449,25 +550,217 @@
             return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
         }
 
-        // ===================== ТАЙМЕРЫ И СЕССИЯ =====================
+        // ===================== PROGRESSION HELPERS (NEW) =====================
+        function calculateE1RM(weight, reps) {
+            const w = parseFloat(weight) || 0;
+            const r = parseFloat(reps) || 0;
+            if (r < 1) return w;
+            return w * (1 + r / 30); // Epley formula
+        }
+
+        function getBestE1RM(workingSets, unit = 'kg') {
+            if (!workingSets || workingSets.length === 0) return 0;
+            let best = 0;
+            workingSets.forEach(s => {
+                const wKg = toKg(s.weight, unit);
+                const e = calculateE1RM(wKg, s.reps);
+                if (e > best) best = e;
+            });
+            return Math.round(best * 10) / 10;
+        }
+
+        // Detect new PRs when saving workout
+        function detectNewPRs(sessionData) {
+            const prs = get(LS.pr_log);
+            const newPRs = [];
+
+            sessionData.exercises.forEach(ex => {
+                if (!ex.working || ex.working.length === 0) return;
+
+                const unit = ex.unit || 'kg';
+                const currentMaxWeight = Math.max(...ex.working.map(s => parseFloat(s.weight) || 0));
+                const currentE1RM = getBestE1RM(ex.working, unit);
+
+                // Find historical max
+                let historicalMaxWeight = 0;
+                let historicalMaxE1RM = 0;
+
+                get(LS.history).forEach(oldSession => {
+                    const oldEx = (oldSession.exercises || []).find(e => e.exerciseName === ex.exerciseName);
+                    if (oldEx && oldEx.working) {
+                        const w = Math.max(...oldEx.working.map(s => parseFloat(s.weight) || 0));
+                        const e = getBestE1RM(oldEx.working, oldEx.unit || 'kg');
+                        if (w > historicalMaxWeight) historicalMaxWeight = w;
+                        if (e > historicalMaxE1RM) historicalMaxE1RM = e;
+                    }
+                });
+
+                // Check weight PR
+                if (currentMaxWeight > historicalMaxWeight && currentMaxWeight > 0) {
+                    newPRs.push({
+                        type: 'weight',
+                        exercise: ex.exerciseName,
+                        old: historicalMaxWeight,
+                        new: currentMaxWeight,
+                        unit: unitLabel(unit),
+                        date: sessionData.date
+                    });
+                }
+
+                // Check E1RM PR
+                if (currentE1RM > historicalMaxE1RM && currentE1RM > 0) {
+                    newPRs.push({
+                        type: 'e1rm',
+                        exercise: ex.exerciseName,
+                        old: historicalMaxE1RM,
+                        new: currentE1RM,
+                        unit: 'кг',
+                        date: sessionData.date
+                    });
+                }
+            });
+
+            if (newPRs.length > 0) {
+                // Save PRs
+                newPRs.forEach(pr => prs.unshift(pr));
+                set(LS.pr_log, prs.slice(0, 200)); // keep last 200
+                showPRModal(newPRs);
+            }
+        }
+
+        function showPRModal(prs) {
+            const modal = document.getElementById('pr-modal');
+            const list = document.getElementById('pr-modal-list');
+            
+            let html = '';
+            prs.forEach(pr => {
+                const change = pr.type === 'weight' 
+                    ? `${pr.old} → ${pr.new} ${pr.unit}`
+                    : `1ПМ ${pr.old} → ${pr.new} ${pr.unit}`;
+                html += `<div class="pr-item">
+                    <strong>${pr.exercise}</strong><br>
+                    <span style="color:#ffd369">${change}</span>
+                </div>`;
+            });
+            list.innerHTML = html;
+            modal.style.display = 'flex';
+
+            // Simple confetti
+            for (let i = 0; i < 25; i++) {
+                setTimeout(() => createConfetti(modal), i * 8);
+            }
+        }
+
+        function createConfetti(container) {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.top = '-10px';
+            c.style.background = ['#ffd369', '#4ecca3', '#00adb5'][Math.floor(Math.random()*3)];
+            c.style.width = c.style.height = (6 + Math.random()*8) + 'px';
+            container.appendChild(c);
+            setTimeout(() => c.remove(), 1400);
+        }
+
+        function hidePRModal() {
+            document.getElementById('pr-modal').style.display = 'none';
+        }
+
+        // Smart suggestion based on last performance
+        function getSmartSuggestion(lastWorking) {
+            if (!lastWorking || lastWorking.length === 0) return null;
+
+            let totalRPE = 0, totalRIR = 0, count = 0;
+            lastWorking.forEach(s => {
+                const rpe = parseFloat(s.rpe) || 0;
+                const rir = parseFloat(s.rir) || 0;
+                if (rpe > 0 || rir > 0) {
+                    totalRPE += rpe || (10 - rir);
+                    totalRIR += rir || (10 - rpe);
+                    count++;
+                }
+            });
+            if (count === 0) return null;
+
+            const avgRPE = totalRPE / count;
+            const avgRIR = totalRIR / count;
+
+            let suggestion = '';
+            let action = '';
+
+            if (avgRPE <= 7.5 && avgRIR >= 2.5) {
+                suggestion = `+2.5 кг (RPE ${avgRPE.toFixed(1)}, RIR ${avgRIR.toFixed(1)})`;
+                action = 'increase_weight';
+            } else if (avgRPE <= 8.5 && avgRIR >= 1.5) {
+                suggestion = `+1 повтор или +1.25 кг`;
+                action = 'increase_reps_or_small_weight';
+            } else {
+                suggestion = `Сохрани вес (RPE ${avgRPE.toFixed(1)})`;
+                action = 'maintain';
+            }
+            return { text: suggestion, action, avgRPE, avgRIR };
+        }
+
+        // Plateau detection (last 21+ days no progress)
+        function checkPlateau(exerciseName) {
+            const hist = get(LS.history);
+            const relevant = hist
+                .filter(s => (s.exercises || []).some(e => e.exerciseName === exerciseName))
+                .slice(0, 8); // last 8 sessions max
+
+            if (relevant.length < 3) return null;
+
+            let lastMax = 0;
+            let daysSinceProgress = 0;
+            const now = Date.now();
+
+            for (let i = 0; i < relevant.length; i++) {
+                const ex = relevant[i].exercises.find(e => e.exerciseName === exerciseName);
+                if (!ex || !ex.working) continue;
+
+                const maxW = Math.max(...ex.working.map(s => parseFloat(s.weight) || 0));
+                const e1rm = getBestE1RM(ex.working, ex.unit || 'kg');
+
+                if (i === 0) {
+                    lastMax = Math.max(maxW, e1rm);
+                } else {
+                    const currentMax = Math.max(maxW, e1rm);
+                    if (currentMax > lastMax + 0.5) {
+                        return null; // progress found
+                    }
+                }
+            }
+
+            // Calculate days since last session
+            const lastSessionTs = relevant[0].id || Date.now();
+            daysSinceProgress = Math.floor((now - lastSessionTs) / (1000 * 3600 * 24));
+
+            if (daysSinceProgress >= 21) {
+                return `${daysSinceProgress} дней`;
+            }
+            return null;
+        }
+
+        // ===================== TIMERS & SESSION =====================
         let sessionActive = false, startTime = 0, lastSetTime = 0;
         let restEndTime = null, restInterval = null, audioCtx = null, draftInterval = null;
 
         setInterval(() => {
             if (!sessionActive) return;
             const el = Math.floor((Date.now() - startTime) / 1000);
-            document.getElementById('general-timer').innerText =
-                `Время сессии: ${String(Math.floor(el / 60)).padStart(2, '0')}:${String(el % 60).padStart(2, '0')}`;
+            const timerEl = document.getElementById('general-timer');
+            if (timerEl) timerEl.innerText = `Время сессии: ${String(Math.floor(el / 60)).padStart(2, '0')}:${String(el % 60).padStart(2, '0')}`;
         }, 1000);
 
         function updateTimerPanel() {
-            document.getElementById('timer-panel').style.display =
-                (currentTab === 'workout' && sessionActive) ? 'block' : 'none';
+            const panel = document.getElementById('timer-panel');
+            if (panel) panel.style.display = (currentTab === 'workout' && sessionActive) ? 'block' : 'none';
         }
 
         function extractSessionData() {
             const cards = document.querySelectorAll('#exercises-container .exercise-card');
-            const exercisesData = []; const groups = new Set();
+            const exercisesData = [];
+            const groups = new Set();
             let totalKg = 0;
 
             cards.forEach(card => {
@@ -477,21 +770,33 @@
                 const warmup = [], working = [];
                 
                 card.querySelectorAll('.warmup-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
+                    const w = row.querySelector('.inp-w').value;
+                    const r = row.querySelector('.inp-r').value;
                     const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
                     const done = row.querySelector('.btn-check').classList.contains('done');
                     warmup.push({ weight: w, reps: r, rest, done });
                 });
+                
                 card.querySelectorAll('.working-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
-                    const rpe = row.querySelector('.inp-rpe').value, rir = row.querySelector('.inp-rir').value;
+                    const w = row.querySelector('.inp-w').value;
+                    const r = row.querySelector('.inp-r').value;
+                    const rpe = row.querySelector('.inp-rpe').value;
+                    const rir = row.querySelector('.inp-rir').value;
                     const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
                     const done = row.querySelector('.btn-check').classList.contains('done');
                     working.push({ weight: w, reps: r, rpe, rir, tempo: '3-0-1-0', rest, done });
                 });
                 
                 if (warmup.length || working.length) {
-                    exercisesData.push({ exerciseName: name, unit, group: card.dataset.group, warmup, working });
+                    const bestE1RM = getBestE1RM(working, unit);
+                    exercisesData.push({ 
+                        exerciseName: name, 
+                        unit, 
+                        group: card.dataset.group, 
+                        warmup, 
+                        working,
+                        bestE1RM: bestE1RM > 0 ? bestE1RM : null
+                    });
                     totalKg += working.reduce((s, x) => s + toKg(x.weight, unit) * (parseFloat(x.reps) || 0), 0);
                 }
             });
@@ -515,18 +820,19 @@
 
         function checkDraft() {
             if (localStorage.getItem(LS.draft)) {
-                document.getElementById('draft-notice').style.display = 'block';
+                const notice = document.getElementById('draft-notice');
+                if (notice) notice.style.display = 'block';
             }
         }
 
         function requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
         }
 
         function startSession() {
-            requestNotificationPermission(); // Запрашиваем пуши при клике
+            requestNotificationPermission();
 
             const draftObj = JSON.parse(localStorage.getItem(LS.draft) || 'null');
             if (draftObj && confirm('У тебя есть несохраненная тренировка. Восстановить черновик?')) {
@@ -535,16 +841,22 @@
             }
             
             localStorage.removeItem(LS.draft);
-            document.getElementById('draft-notice').style.display = 'none';
+            const notice = document.getElementById('draft-notice');
+            if (notice) notice.style.display = 'none';
 
-            sessionActive = true; startTime = Date.now(); lastSetTime = Date.now();
+            sessionActive = true; 
+            startTime = Date.now(); 
+            lastSetTime = Date.now();
+            
             document.getElementById('session-start').style.display = 'none';
             document.getElementById('session-active').style.display = 'block';
             document.getElementById('exercises-container').innerHTML = '';
             document.getElementById('general-timer').innerText = 'Время сессии: 00:00';
             
-            populateExercises(); recalcVolume(); updateTimerPanel();
-            draftInterval = setInterval(saveDraft, 2000); // Автосохранение
+            populateExercises(); 
+            recalcVolume(); 
+            updateTimerPanel();
+            draftInterval = setInterval(saveDraft, 2000);
         }
 
         function restoreDraft(draft) {
@@ -564,15 +876,19 @@
                 
                 const card = document.getElementById('exercises-container').lastElementChild;
                 const warmC = card.querySelector('.warmup-sets');
-                warmC.innerHTML = ex.warmup.map(s => warmupRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.done, s.rest)).join('');
+                warmC.innerHTML = (ex.warmup || []).map(s => 
+                    warmupRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.done, s.rest)).join('');
                 
                 const workC = card.querySelector('.working-sets');
-                workC.innerHTML = ex.working.map(s => workingRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.rpe, s.rir, s.done, s.rest)).join('');
+                workC.innerHTML = (ex.working || []).map(s => 
+                    workingRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.rpe, s.rir, s.done, s.rest)).join('');
             });
 
-            recalcVolume(); updateTimerPanel();
+            recalcVolume(); 
+            updateTimerPanel();
             draftInterval = setInterval(saveDraft, 2000);
-            document.getElementById('draft-notice').style.display = 'none';
+            const notice = document.getElementById('draft-notice');
+            if (notice) notice.style.display = 'none';
         }
 
         function endSessionUI() {
@@ -582,8 +898,10 @@
             document.getElementById('session-start').style.display = 'block';
             document.getElementById('session-active').style.display = 'none';
             document.getElementById('exercises-container').innerHTML = '';
-            document.getElementById('draft-notice').style.display = 'none';
-            skipRest(); updateTimerPanel();
+            const notice = document.getElementById('draft-notice');
+            if (notice) notice.style.display = 'none';
+            skipRest(); 
+            updateTimerPanel();
         }
 
         function cancelSession() {
@@ -591,12 +909,13 @@
             endSessionUI();
         }
 
-        // ===================== УПРАЖНЕНИЯ И ПОДХОДЫ =====================
+        // ===================== EXERCISES =====================
         function populateExercises() {
             const group = document.getElementById('muscle-group').value;
             const sel = document.getElementById('exercise-select');
             sel.innerHTML = (getDB()[group] || []).map(n => `<option value="${n}">${n}</option>`).join('');
         }
+
         function addCustomExercise() {
             const group = document.getElementById('muscle-group').value;
             const name = (prompt(`Название упражнения для группы "${group}":`) || '').trim();
@@ -609,6 +928,7 @@
             populateExercises();
             document.getElementById('exercise-select').value = name;
         }
+
         function addExercise() {
             if (!sessionActive) return;
             const group = document.getElementById('muscle-group').value;
@@ -618,7 +938,8 @@
                 alert('Это упражнение уже добавлено в сессию.'); return;
             }
             document.getElementById('exercises-container').insertAdjacentHTML('beforeend', exerciseCardHTML(name, group));
-            recalcVolume(); saveDraft();
+            recalcVolume(); 
+            saveDraft();
         }
 
         function warmupRowHTML(uL, valW='', valR='', done=false, rest='0:00') {
@@ -633,6 +954,7 @@
                     <button class="btn-check ${dClass}" ${rAttr} onclick="completeSet(this, 90)">${dText}</button>
                 </div>`;
         }
+
         function workingRowHTML(uL, valW='', valR='', valRpe='', valRir='', done=false, rest='0:00') {
             const dClass = done ? 'done' : '';
             const dText = done ? '⚙' : '✓';
@@ -661,17 +983,42 @@
             const uL = unitLabel(unit);
 
             let lastBlock = `<div class="last-perf">Прошлый раз: данных нет — базовая точка отсчёта.</div>`;
+            let suggestionHTML = '';
+
             if (last) {
                 const lastUL = unitLabel(last.unit);
                 const vol = setVolume(last.working);
                 const maxW = Math.max(...last.working.map(s => parseFloat(s.weight) || 0));
+                const e1rm = getBestE1RM(last.working, last.unit);
                 const setsStr = last.working.map(s => `${s.weight || '?'}${lastUL}×${s.reps || '?'}`).join(', ');
+                
                 lastBlock = `
                     <div class="last-perf">
                         Прошлый раз (${last.date}): ${setsStr}<br>
-                        Объём: <span class="pr">${vol} ${lastUL}</span> · Макс. вес: <span class="pr">${maxW} ${lastUL}</span>
+                        Объём: <span class="pr">${vol} ${lastUL}</span> · Макс: <span class="pr">${maxW} ${lastUL}</span>
+                        ${e1rm > 0 ? `· 1ПМ: <span class="pr">${e1rm} кг</span>` : ''}
                         <br><button class="btn-repeat" onclick="repeatLast(this)">↺ Повторить прошлые значения</button>
                     </div>`;
+
+                // Smart suggestion
+                const sug = getSmartSuggestion(last.working);
+                if (sug) {
+                    suggestionHTML = `
+                        <div class="suggestion-box">
+                            <div class="title">💡 Рекомендация на след. раз</div>
+                            <div>${sug.text}</div>
+                            <button onclick="applySuggestion(this, '${name}')" 
+                                    style="margin-top:6px; background:#00adb5; padding:6px 14px; font-size:12px; width:auto;">
+                                Применить
+                            </button>
+                        </div>`;
+                }
+
+                // Plateau warning
+                const plateauDays = checkPlateau(name);
+                if (plateauDays) {
+                    suggestionHTML += `<div style="margin-top:6px;"><span class="plateau-badge">Плато ${plateauDays}</span></div>`;
+                }
             }
             
             const lastSets = last ? last.working : [];
@@ -694,6 +1041,7 @@
                     </div>
                 </div>
                 ${lastBlock}
+                ${suggestionHTML}
                 <hr style="border: 0.5px solid #333; margin: 10px 0;">
 
                 <h4>🔄 Разминка (Отдых 90с)</h4>
@@ -714,6 +1062,33 @@
             </div>`;
         }
 
+        function applySuggestion(btn, exerciseName) {
+            const card = btn.closest('.exercise-card');
+            if (!card) return;
+            
+            const last = lastPerformance(exerciseName);
+            if (!last || !last.working.length) return;
+
+            const firstWorking = card.querySelector('.working-row');
+            if (!firstWorking) return;
+
+            const lastSet = last.working[0];
+            const unit = card.dataset.unit || 'kg';
+            const uL = unitLabel(unit);
+
+            // Simple logic: increase weight by 2.5 if possible
+            const currentW = parseFloat(firstWorking.querySelector('.inp-w').value) || parseFloat(lastSet.weight) || 0;
+            const newW = (currentW + 2.5).toFixed(1);
+
+            firstWorking.querySelector('.inp-w').value = newW;
+            firstWorking.querySelector('.inp-r').value = lastSet.reps || '8';
+
+            recalcVolume();
+            saveDraft();
+            btn.innerText = '✓ Применено';
+            setTimeout(() => btn.remove(), 1200);
+        }
+
         function changeUnit(sel) {
             const card = sel.closest('.exercise-card');
             const newUnit = sel.value;
@@ -724,10 +1099,16 @@
             card.querySelectorAll('.inp-w').forEach(inp => {
                 if (inp.placeholder === 'кг' || inp.placeholder === 'lb') inp.placeholder = uL;
             });
-            recalcVolume(); saveDraft();
+            recalcVolume(); 
+            saveDraft();
         }
 
-        function removeExercise(btn) { btn.closest('.exercise-card').remove(); recalcVolume(); saveDraft(); }
+        function removeExercise(btn) { 
+            btn.closest('.exercise-card').remove(); 
+            recalcVolume(); 
+            saveDraft(); 
+        }
+        
         function addSet(btn, type) {
             const card = btn.closest('.exercise-card');
             const uL = unitLabel(card.dataset.unit || 'kg');
@@ -735,11 +1116,17 @@
             c.insertAdjacentHTML('beforeend', type === 'warmup' ? warmupRowHTML(uL) : workingRowHTML(uL));
             saveDraft();
         }
+        
         function removeSet(btn, type) {
             const card = btn.closest('.exercise-card');
             const c = card.querySelector(type === 'warmup' ? '.warmup-sets' : '.working-sets');
-            if (c.children.length > 1) { c.removeChild(c.children[c.children.length - 1]); recalcVolume(); saveDraft(); }
+            if (c.children.length > 1) { 
+                c.removeChild(c.children[c.children.length - 1]); 
+                recalcVolume(); 
+                saveDraft(); 
+            }
         }
+        
         function repeatLast(btn) {
             const card = btn.closest('.exercise-card');
             const last = lastPerformance(card.dataset.name);
@@ -758,7 +1145,8 @@
                 rows[i].querySelector('.inp-w').value = s.weight || '';
                 rows[i].querySelector('.inp-r').value = s.reps || '';
             });
-            recalcVolume(); saveDraft();
+            recalcVolume(); 
+            saveDraft();
         }
 
         function recalcVolume() {
@@ -777,7 +1165,12 @@
             if (sv) sv.innerText = `${Math.round(totalKg)} кг`;
         }
 
-        function ensureAudio() { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } }
+        function ensureAudio() { 
+            if (!audioCtx) { 
+                try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} 
+            } 
+        }
+        
         function beep() {
             if (!audioCtx) return;
             try {
@@ -788,7 +1181,7 @@
                 g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
                 g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
                 o.start(); o.stop(audioCtx.currentTime + 0.4);
-            } catch (e) {}
+            } catch(e){}
         }
         
         function completeSet(btn, restSec) {
@@ -802,7 +1195,8 @@
                 lastSetTime = now;
                 startRestTimer(restSec);
             } else {
-                btn.innerText = '✓'; btn.removeAttribute('data-actual-rest');
+                btn.innerText = '✓'; 
+                btn.removeAttribute('data-actual-rest');
             }
             saveDraft();
         }
@@ -825,27 +1219,33 @@
                 const r = Math.ceil((restEndTime - Date.now()) / 1000);
                 if (r <= 0) {
                     clearInterval(restInterval); restInterval = null;
-                    display.innerText = "00:00"; display.style.color = "var(--success-color)";
+                    display.innerText = "00:00"; 
+                    display.style.color = "var(--success-color)";
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     beep();
-                    sendNativeNotification(); // Системный Push
+                    sendNativeNotification();
                 } else {
                     display.innerText = `${String(Math.floor(r / 60)).padStart(2, '0')}:${String(r % 60).padStart(2, '0')}`;
                     display.style.color = "var(--warning-color)";
                 }
             };
-            tick(); restInterval = setInterval(tick, 500);
+            tick(); 
+            restInterval = setInterval(tick, 500);
         }
+        
         function adjustRest(delta) {
             if (!restInterval) return;
             restEndTime += delta * 1000;
             if (restEndTime < Date.now()) restEndTime = Date.now();
         }
+        
         function skipRest() {
             if (restInterval) { clearInterval(restInterval); restInterval = null; }
             const d = document.getElementById('rest-timer');
-            d.innerText = "00:00"; d.style.color = "var(--text-muted)";
+            d.innerText = "00:00"; 
+            d.style.color = "var(--text-muted)";
         }
+        
         function syncRpeRir(input, target) {
             const val = parseFloat(input.value);
             const row = input.parentElement;
@@ -857,24 +1257,36 @@
 
         function saveWorkout() {
             const sessionData = extractSessionData();
-            if (sessionData.exercises.length === 0) { alert('Нечего сохранять: заполни хотя бы один подход.'); return; }
+            if (sessionData.exercises.length === 0) { 
+                alert('Нечего сохранять: заполни хотя бы один подход.'); 
+                return; 
+            }
 
-            const h = get(LS.history); h.unshift(sessionData); set(LS.history, h);
+            const h = get(LS.history); 
+            h.unshift(sessionData); 
+            set(LS.history, h);
 
-            endSessionUI(); renderHistory(); renderCalendar();
-            setTimeout(() => alert(`Тренировка сохранена! Объём: ${sessionData.totalVolume} кг`), 50);
+            // NEW: Detect and show PRs
+            detectNewPRs(sessionData);
+
+            endSessionUI(); 
+            renderHistory(); 
+            renderCalendar();
+            
+            setTimeout(() => {
+                alert(`Тренировка сохранена! Объём: ${sessionData.totalVolume} кг`);
+            }, 80);
         }
 
-        // ===================== КАЛЕНДАРЬ АКТИВНОСТИ =====================
+        // ===================== CALENDAR =====================
         function renderCalendar() {
             const container = document.getElementById('activity-calendar');
             if (!container) return;
             
             const today = new Date();
-            const daysToShow = 42; // 6 недель
+            const daysToShow = 42;
             const dayMap = {};
 
-            // Собираем типы активности по дням
             get(LS.history).forEach(e => dayMap[e.day || dayFromTs(e.id)] = 'workout');
             get(LS.pool).forEach(e => {
                 const d = e.day || dayFromTs(e.id);
@@ -904,7 +1316,7 @@
             container.innerHTML = html;
         }
 
-        // ===================== ЕДИНАЯ ИСТОРИЯ =====================
+        // ===================== HISTORY =====================
         function renderHistory() {
             const events = [];
             for (const s of get(LS.history)) {
@@ -958,6 +1370,7 @@
                     if (!warm.length && !work.length) return;
                     const uL = unitLabel(ex.unit || 'kg');
                     body += `<div style="margin-left:10px; margin-top:5px;"><strong>${ex.exerciseName}</strong> <span style="color:var(--text-muted); font-size:11px;">[${uL}]</span>`;
+                    if (ex.bestE1RM) body += ` <span class="pr-badge">1ПМ ${ex.bestE1RM}</span>`;
                     if (warm.length) body += `<br><span style="color:var(--text-muted); font-size:12px;">Разминка:</span> ` +
                         warm.map(x => `${x.weight}${uL}×${x.reps} <span class="rest-badge">⏱️${x.rest}</span>`).join(' | ');
                     if (work.length) body += `<br><span style="color:var(--warning-color); font-size:12px;">Рабочие:</span> ` +
@@ -974,6 +1387,7 @@
                     ${body}
                 </div>`;
             }
+            // ... other event types remain the same (water, weight, etc.)
             if (e.type === 'water') {
                 return `<div class="ev-item ev-water"><div class="ev-head">
                     <div>💧 <strong>+${e.data.ml} мл</strong> <span class="ev-time">${time}</span></div>
@@ -1021,13 +1435,14 @@
             set(key, get(key).filter(x => String(x.id) !== String(id)));
             renderAll();
         }
+        
         function clearAllHistory() {
-            if (!confirm('Полностью очистить ВСЁ? Свои упражнения и настройки единиц останутся.')) return;
-            [LS.history, LS.water, LS.weight, LS.sauna, LS.pool, LS.sleep, LS.caffeine].forEach(k => localStorage.removeItem(k));
+            if (!confirm('Полностью очистить ВСЁ?')) return;
+            [LS.history, LS.water, LS.weight, LS.sauna, LS.pool, LS.sleep, LS.caffeine, LS.pr_log].forEach(k => localStorage.removeItem(k));
             renderAll();
         }
 
-        // ===================== СОН =====================
+        // ===================== OTHER MODULES (water, sleep, etc. - unchanged for brevity) =====================
         function addSleep() {
             const startVal = document.getElementById('sleep-start').value;
             const endVal = document.getElementById('sleep-end').value;
@@ -1036,7 +1451,6 @@
             const startDate = new Date(startVal);
             const endDate = new Date(endVal);
             const diffMs = endDate - startDate;
-            
             if (diffMs <= 0) { alert('Время пробуждения должно быть позже времени сна'); return; }
             
             const hrs = Math.floor(diffMs / 3600000);
@@ -1054,6 +1468,7 @@
             document.getElementById('sleep-end').value = '';
             renderSleep();
         }
+        
         function renderSleep() {
             const h = get(LS.sleep);
             const c = document.getElementById('sleep-history');
@@ -1068,7 +1483,6 @@
                 : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
-        // ===================== КОФЕИН =====================
         function addCaffeine(mg) {
             const dateVal = document.getElementById('caffeine-date').value;
             const ts = dateVal ? new Date(dateVal).getTime() : Date.now();
@@ -1092,7 +1506,6 @@
                 : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
-        // ===================== ВОДА =====================
         function addWater(ml) {
             const h = get(LS.water); h.unshift({ ...nowStamp(), ml }); set(LS.water, h);
             renderWater();
@@ -1110,8 +1523,9 @@
             
             const goal = 2000;
             const pct = Math.min(100, Math.round((todaySum / goal) * 100));
-            document.getElementById('water-progress').style.width = `${pct}%`;
-            document.getElementById('water-progress').style.background = pct >= 100 ? 'var(--success-color)' : '#4aa3ff';
+            const progress = document.getElementById('water-progress');
+            progress.style.width = `${pct}%`;
+            progress.style.background = pct >= 100 ? 'var(--success-color)' : '#4aa3ff';
 
             const c = document.getElementById('water-history');
             const todayLogs = h.filter(x => x.day === todayKey());
@@ -1121,7 +1535,6 @@
                 : '<span style="color:var(--text-muted)">Сегодня воды нет.</span>';
         }
 
-        // ===================== ВЕС, САУНА, БАССЕЙН =====================
         function addWeight() {
             const v = parseFloat(document.getElementById('weight-input').value);
             if (!v || v <= 0) return;
@@ -1203,20 +1616,31 @@
             }).join('') : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
-        // ===================== ЭКСПОРТ / ИМПОРТ =====================
+        // ===================== EXPORT / IMPORT =====================
         function exportData() {
             const payload = {
-                version: 4, exported: new Date().toISOString(),
-                workout_history: get(LS.history), custom_exercises: getObj(LS.custom), exercise_units: getObj(LS.units),
-                water_log: get(LS.water), bodyweight_log: get(LS.weight), sauna_log: get(LS.sauna), pool_log: get(LS.pool),
-                sleep_log: get(LS.sleep), caffeine_log: get(LS.caffeine)
+                version: 5,
+                exported: new Date().toISOString(),
+                workout_history: get(LS.history),
+                custom_exercises: getObj(LS.custom),
+                exercise_units: getObj(LS.units),
+                water_log: get(LS.water),
+                bodyweight_log: get(LS.weight),
+                sauna_log: get(LS.sauna),
+                pool_log: get(LS.pool),
+                sleep_log: get(LS.sleep),
+                caffeine_log: get(LS.caffeine),
+                pr_log: get(LS.pr_log)
             };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = `workout_backup_${new Date().toISOString().slice(0, 10)}.json`;
-            a.click(); URL.revokeObjectURL(url);
+            a.href = url; 
+            a.download = `workout_progression_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click(); 
+            URL.revokeObjectURL(url);
         }
+        
         function importData(input) {
             const file = input.files[0];
             if (!file) return;
@@ -1224,7 +1648,7 @@
             reader.onload = (e) => {
                 try {
                     const d = JSON.parse(e.target.result);
-                    const replace = confirm('OK — Заменить все данные.\nОтмена — Добавить к текущим (слияние).');
+                    const replace = confirm('OK — Заменить все данные.\nОтмена — Добавить к текущим.');
                     const merge = (key, incoming) => {
                         if (!Array.isArray(incoming)) return;
                         if (replace) { set(key, incoming); return; }
@@ -1238,86 +1662,187 @@
                         dedup.sort((a, b) => (b.id || 0) - (a.id || 0));
                         set(key, dedup);
                     };
-                    merge(LS.history, d.workout_history || (Array.isArray(d) ? d : []));
-                    merge(LS.water, d.water_log); merge(LS.weight, d.bodyweight_log);
-                    merge(LS.sauna, d.sauna_log); merge(LS.pool, d.pool_log);
-                    merge(LS.sleep, d.sleep_log); merge(LS.caffeine, d.caffeine_log);
+                    merge(LS.history, d.workout_history);
+                    merge(LS.water, d.water_log);
+                    merge(LS.weight, d.bodyweight_log);
+                    merge(LS.sauna, d.sauna_log);
+                    merge(LS.pool, d.pool_log);
+                    merge(LS.sleep, d.sleep_log);
+                    merge(LS.caffeine, d.caffeine_log);
+                    merge(LS.pr_log, d.pr_log || []);
                     
                     if (d.custom_exercises) {
                         const cur = getObj(LS.custom);
-                        for (const g of Object.keys(d.custom_exercises)) cur[g] = Array.from(new Set([...(cur[g] || []), ...d.custom_exercises[g]]));
+                        for (const g of Object.keys(d.custom_exercises)) {
+                            cur[g] = Array.from(new Set([...(cur[g] || []), ...d.custom_exercises[g]]));
+                        }
                         setObj(LS.custom, cur);
                     }
                     if (d.exercise_units) {
-                        const cur = getObj(LS.units); Object.assign(cur, d.exercise_units); setObj(LS.units, cur);
+                        const cur = getObj(LS.units); 
+                        Object.assign(cur, d.exercise_units); 
+                        setObj(LS.units, cur);
                     }
                     renderAll();
                     alert('Импорт завершён.');
-                } catch (err) { alert('Не удалось прочитать файл: неверный формат.'); }
+                } catch (err) { 
+                    alert('Не удалось прочитать файл.'); 
+                }
             };
             reader.readAsText(file);
             input.value = '';
         }
 
-        // ===================== ГРАФИКИ =====================
+        // ===================== CHARTS (ENHANCED WITH E1RM) =====================
         const CHART_W = 400, CHART_TICK = '#888', CHART_GRID = '#333';
-        function lineChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
+        
+        function lineChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200, secondaryValues = null, secondaryColor = '#ffd369' }) {
             if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
             const W = CHART_W, H = height, m = { l: 48, r: 10, t: 10, b: 26 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
-            let min = Math.min(...values), max = Math.max(...values); if (min === max) { min -= 1; max += 1; }
+            let min = Math.min(...values), max = Math.max(...values);
+            if (secondaryValues && secondaryValues.length) {
+                min = Math.min(min, ...secondaryValues);
+                max = Math.max(max, ...secondaryValues);
+            }
+            if (min === max) { min -= 1; max += 1; }
             const pad = (max - min) * 0.1, yMin = min - pad, yMax = max + pad;
             const xy = (i, v) => [values.length > 1 ? m.l + i * (pw / (values.length - 1)) : m.l + pw / 2, m.t + ph - (v - yMin) / (yMax - yMin) * ph];
+            
             let grid = '';
             for (let k = 0; k <= 3; k++) {
                 const t = yMin + (yMax - yMin) * k / 3, y = m.t + ph - (t - yMin) / (yMax - yMin) * ph;
                 grid += `<line x1="${m.l}" y1="${y}" x2="${W - m.r}" y2="${y}" stroke="${CHART_GRID}" stroke-width="0.5"/>`;
                 grid += `<text x="${m.l - 6}" y="${y + 4}" fill="${CHART_TICK}" font-size="10" text-anchor="end">${yFmt(t)}</text>`;
             }
-            const step = Math.max(1, Math.ceil(values.length / 5)); let xLbls = '';
+            
+            const step = Math.max(1, Math.ceil(values.length / 5)); 
+            let xLbls = '';
             for (let i = 0; i < values.length; i++) {
                 if (i % step !== 0 && i !== values.length - 1) continue;
-                const [x] = xy(i, values[i]); xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
+                const [x] = xy(i, values[i]); 
+                xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
             }
-            const pts = values.map((v, i) => xy(i, v).join(',')).join(' '); let dots = '';
+            
+            const pts = values.map((v, i) => xy(i, v).join(',')).join(' ');
+            let dots = '';
             values.forEach((v, i) => { const [x, y] = xy(i, v); dots += `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`; });
-            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${dots}${xLbls}</svg>`;
-        }
-        function barChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
-            if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
-            const W = CHART_W, H = height, m = { l: 48, r: 10, t: 10, b: 26 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
-            const max = Math.max(...values, 1), yMax = max * 1.1; let grid = '';
-            for (let k = 0; k <= 3; k++) {
-                const t = yMax * k / 3, y = m.t + ph - (t / yMax) * ph;
-                grid += `<line x1="${m.l}" y1="${y}" x2="${W - m.r}" y2="${y}" stroke="${CHART_GRID}" stroke-width="0.5"/>`;
-                grid += `<text x="${m.l - 6}" y="${y + 4}" fill="${CHART_TICK}" font-size="10" text-anchor="end">${yFmt(t)}</text>`;
+            
+            let secondaryLine = '';
+            if (secondaryValues && secondaryValues.length === values.length) {
+                const pts2 = secondaryValues.map((v, i) => xy(i, v).join(',')).join(' ');
+                secondaryLine = `<polyline points="${pts2}" fill="none" stroke="${secondaryColor}" stroke-width="2.5" stroke-linejoin="round"/>`;
+                secondaryValues.forEach((v, i) => { 
+                    const [x, y] = xy(i, v); 
+                    secondaryLine += `<circle cx="${x}" cy="${y}" r="2.5" fill="${secondaryColor}"/>`; 
+                });
             }
-            const bw = pw / values.length, gap = Math.min(4, bw * 0.2); let bars = '';
-            values.forEach((v, i) => {
-                const h = (v / yMax) * ph, x = m.l + i * bw + gap / 2, y = m.t + ph - h;
-                bars += `<rect x="${x}" y="${y}" width="${Math.max(0, bw - gap)}" height="${h}" fill="${color}" rx="2"/>`;
-            });
-            const step = Math.max(1, Math.ceil(values.length / 6)); let xLbls = '';
-            for (let i = 0; i < values.length; i++) {
-                if (i % step !== 0 && i !== values.length - 1) continue;
-                const x = m.l + i * bw + bw / 2; xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
-            }
-            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${bars}${xLbls}</svg>`;
+            
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${secondaryLine}${dots}${xLbls}</svg>`;
         }
-        function dmShort(ts) { const d = new Date(ts); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`; }
-        function dayToTs(dayKey) { return new Date(dayKey + 'T00:00:00').getTime(); }
-        function getWeightSeries() { return [...get(LS.weight)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).map(x => ({ ts: x.ts || x.id, kg: x.kg })); }
-        function getPoolPaceSeries() { return [...get(LS.pool)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).filter(x => x.meters > 0).map(x => ({ ts: x.ts || x.id, paceSec: x.timeSec * 100 / x.meters })); }
-        function getDailySums(key, field, days) {
-            const map = new Map();
-            for (const x of get(key)) { const day = x.day || dayFromTs(x.ts || x.id); map.set(day, (map.get(day) || 0) + (x[field] || 0)); }
-            const out = [], today = new Date(); today.setHours(0, 0, 0, 0);
-            for (let i = days - 1; i >= 0; i--) {
-                const d = new Date(today); d.setDate(today.getDate() - i);
-                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                out.push({ day: k, value: map.get(k) || 0 });
+
+        function dmShort(ts) { 
+            const d = new Date(ts); 
+            return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`; 
+        }
+        
+        function dayToTs(dayKey) { 
+            return new Date(dayKey + 'T00:00:00').getTime(); 
+        }
+        
+        function getExerciseProgression(name) {
+            const out = [];
+            const hist = [...get(LS.history)].sort((a, b) => (a.id || 0) - (b.id || 0));
+            for (const s of hist) {
+                const ex = (s.exercises || []).find(e => e.exerciseName === name && e.working && e.working.length);
+                if (!ex) continue;
+                const u = ex.unit || 'kg';
+                const maxRaw = Math.max(...ex.working.map(x => parseFloat(x.weight) || 0));
+                const e1rm = ex.bestE1RM || getBestE1RM(ex.working, u);
+                out.push({ 
+                    ts: s.id, 
+                    maxWeight: toKg(maxRaw, u),
+                    e1rm: e1rm
+                });
             }
             return out;
         }
+        
+        function renderExerciseChart() {
+            const name = document.getElementById('charts-exercise-select').value;
+            const data = name ? getExerciseProgression(name) : [];
+            
+            const maxWeights = data.map(x => x.maxWeight);
+            const e1rms = data.map(x => x.e1rm);
+            const labels = data.map(x => dmShort(x.ts));
+            
+            document.getElementById('chart-exercise').innerHTML = lineChartSVG({
+                values: maxWeights, 
+                labels: labels, 
+                yFmt: (v) => v.toFixed(1), 
+                color: '#00adb5',
+                secondaryValues: e1rms.length === maxWeights.length ? e1rms : null,
+                secondaryColor: '#ffd369'
+            });
+        }
+        
+        function renderCharts() {
+            const exList = getExerciseList(), exSel = document.getElementById('charts-exercise-select'), prev = exSel.value;
+            exSel.innerHTML = exList.length ? exList.map(n => `<option value="${n}">${n}</option>`).join('') : '<option value="">— нет упражнений —</option>';
+            if (exList.includes(prev)) exSel.value = prev; 
+            renderExerciseChart();
+            
+            // Other charts remain the same (volume, weight, etc.)
+            const wk = getVolumeByWeek(8);
+            document.getElementById('chart-volume').innerHTML = barChartSVG({ 
+                values: wk.map(x => x.total), 
+                labels: wk.map(x => dmShort(dayToTs(x.weekStart))), 
+                yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'к' : Math.round(v) + '', 
+                color: '#ffd369' 
+            });
+            
+            const ws = getWeightSeries();
+            document.getElementById('chart-weight').innerHTML = lineChartSVG({ 
+                values: ws.map(x => x.kg), 
+                labels: ws.map(x => dmShort(x.ts)), 
+                yFmt: (v) => v.toFixed(1), 
+                color: '#d09bff' 
+            });
+            
+            const pp = getPoolPaceSeries();
+            document.getElementById('chart-pool').innerHTML = lineChartSVG({ 
+                values: pp.map(x => x.paceSec), 
+                labels: pp.map(x => dmShort(x.ts)), 
+                yFmt: (v) => fmtTime(v), 
+                color: '#4ecca3' 
+            });
+            
+            const w14 = getDailySums(LS.water, 'ml', 14);
+            document.getElementById('chart-water').innerHTML = barChartSVG({ 
+                values: w14.map(x => x.value), 
+                labels: w14.map(x => dmShort(dayToTs(x.day))), 
+                yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'л' : Math.round(v) + '', 
+                color: '#4aa3ff' 
+            });
+            
+            const sa14 = getDailySums(LS.sauna, 'minutes', 14);
+            document.getElementById('chart-sauna').innerHTML = barChartSVG({ 
+                values: sa14.map(x => x.value), 
+                labels: sa14.map(x => dmShort(dayToTs(x.day))), 
+                yFmt: (v) => Math.round(v) + '', 
+                color: '#ff8a65' 
+            });
+        }
+
+        function getExerciseList() {
+            const s = new Set();
+            for (const session of get(LS.history)) {
+                for (const ex of (session.exercises || [])) {
+                    if (ex.working && ex.working.length) s.add(ex.exerciseName);
+                }
+            }
+            return [...s].sort();
+        }
+        
         function getVolumeByWeek(weeks = 8) {
             const map = new Map();
             for (const s of get(LS.history)) {
@@ -1329,49 +1854,75 @@
             }
             return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-weeks).map(([k, v]) => ({ weekStart: k, total: v }));
         }
-        function getExerciseList() {
-            const s = new Set();
-            for (const session of get(LS.history)) for (const ex of (session.exercises || [])) if (ex.working && ex.working.length) s.add(ex.exerciseName);
-            return [...s].sort();
+        
+        function getWeightSeries() { 
+            return [...get(LS.weight)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).map(x => ({ ts: x.ts || x.id, kg: x.kg })); 
         }
-        function getExerciseProgressionKg(name) {
-            const out = [], hist = [...get(LS.history)].sort((a, b) => (a.id || 0) - (b.id || 0));
-            for (const s of hist) {
-                const ex = (s.exercises || []).find(e => e.exerciseName === name && e.working && e.working.length);
-                if (!ex) continue; const u = ex.unit || 'kg', maxRaw = Math.max(...ex.working.map(x => parseFloat(x.weight) || 0));
-                out.push({ ts: s.id, kg: toKg(maxRaw, u) });
+        
+        function getPoolPaceSeries() { 
+            return [...get(LS.pool)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).filter(x => x.meters > 0).map(x => ({ ts: x.ts || x.id, paceSec: x.timeSec * 100 / x.meters })); 
+        }
+        
+        function getDailySums(key, field, days) {
+            const map = new Map();
+            for (const x of get(key)) { 
+                const day = x.day || dayFromTs(x.ts || x.id); 
+                map.set(day, (map.get(day) || 0) + (x[field] || 0)); 
+            }
+            const out = [], today = new Date(); today.setHours(0, 0, 0, 0);
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today); d.setDate(today.getDate() - i);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                out.push({ day: k, value: map.get(k) || 0 });
             }
             return out;
         }
-        function renderExerciseChart() {
-            const name = document.getElementById('charts-exercise-select').value, data = name ? getExerciseProgressionKg(name) : [];
-            document.getElementById('chart-exercise').innerHTML = lineChartSVG({ values: data.map(x => x.kg), labels: data.map(x => dmShort(x.ts)), yFmt: (v) => v.toFixed(1), color: '#00adb5' });
-        }
-        function renderCharts() {
-            const exList = getExerciseList(), exSel = document.getElementById('charts-exercise-select'), prev = exSel.value;
-            exSel.innerHTML = exList.length ? exList.map(n => `<option value="${n}">${n}</option>`).join('') : '<option value="">— нет упражнений —</option>';
-            if (exList.includes(prev)) exSel.value = prev; renderExerciseChart();
-            const wk = getVolumeByWeek(8);
-            document.getElementById('chart-volume').innerHTML = barChartSVG({ values: wk.map(x => x.total), labels: wk.map(x => dmShort(dayToTs(x.weekStart))), yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'к' : Math.round(v) + '', color: '#ffd369' });
-            const ws = getWeightSeries();
-            document.getElementById('chart-weight').innerHTML = lineChartSVG({ values: ws.map(x => x.kg), labels: ws.map(x => dmShort(x.ts)), yFmt: (v) => v.toFixed(1), color: '#d09bff' });
-            const pp = getPoolPaceSeries();
-            document.getElementById('chart-pool').innerHTML = lineChartSVG({ values: pp.map(x => x.paceSec), labels: pp.map(x => dmShort(x.ts)), yFmt: (v) => fmtTime(v), color: '#4ecca3' });
-            const w14 = getDailySums(LS.water, 'ml', 14);
-            document.getElementById('chart-water').innerHTML = barChartSVG({ values: w14.map(x => x.value), labels: w14.map(x => dmShort(dayToTs(x.day))), yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'л' : Math.round(v) + '', color: '#4aa3ff' });
-            const sa14 = getDailySums(LS.sauna, 'minutes', 14);
-            document.getElementById('chart-sauna').innerHTML = barChartSVG({ values: sa14.map(x => x.value), labels: sa14.map(x => dmShort(dayToTs(x.day))), yFmt: (v) => Math.round(v) + '', color: '#ff8a65' });
+        
+        function barChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
+            if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
+            const W = CHART_W, H = height, m = { l: 48, r: 10, t: 10, b: 26 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+            const max = Math.max(...values, 1), yMax = max * 1.1; 
+            let grid = '';
+            for (let k = 0; k <= 3; k++) {
+                const t = yMax * k / 3, y = m.t + ph - (t / yMax) * ph;
+                grid += `<line x1="${m.l}" y1="${y}" x2="${W - m.r}" y2="${y}" stroke="${CHART_GRID}" stroke-width="0.5"/>`;
+                grid += `<text x="${m.l - 6}" y="${y + 4}" fill="${CHART_TICK}" font-size="10" text-anchor="end">${yFmt(t)}</text>`;
+            }
+            const bw = pw / values.length, gap = Math.min(4, bw * 0.2); 
+            let bars = '';
+            values.forEach((v, i) => {
+                const h = (v / yMax) * ph, x = m.l + i * bw + gap / 2, y = m.t + ph - h;
+                bars += `<rect x="${x}" y="${y}" width="${Math.max(0, bw - gap)}" height="${h}" fill="${color}" rx="2"/>`;
+            });
+            const step = Math.max(1, Math.ceil(values.length / 6)); 
+            let xLbls = '';
+            for (let i = 0; i < values.length; i++) {
+                if (i % step !== 0 && i !== values.length - 1) continue;
+                const x = m.l + i * bw + bw / 2; 
+                xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
+            }
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${bars}${xLbls}</svg>`;
         }
 
-        // ===================== СТАРТ =====================
+        // ===================== INIT =====================
         function renderAll() {
-            renderHistory(); renderCalendar(); renderWater(); renderSleep(); renderCaffeine(); renderWeight(); renderSauna(); renderPool();
+            renderHistory(); 
+            renderCalendar(); 
+            renderWater(); 
+            renderSleep(); 
+            renderCaffeine(); 
+            renderWeight(); 
+            renderSauna(); 
+            renderPool();
             if (sessionActive) populateExercises();
         }
         
         checkDraft();
         renderAll();
         showTab('workout');
+        
+        // Keyboard shortcut hint
+        console.log('%c[Tracker] Готово. Добавлены: PR система, Estimated 1RM, умные рекомендации, плато-алерты', 'color:#4ecca3');
     </script>
 </body>
 </html>
