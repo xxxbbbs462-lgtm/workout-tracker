@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <title>Локальный Трекер Тренировок</title>
     <style>
         :root {
@@ -120,6 +124,11 @@
         
         .progress-bar-bg { background: #333; border-radius: 6px; height: 12px; width: 100%; overflow: hidden; margin-top: 5px; }
         .progress-bar-fill { background: #4aa3ff; height: 100%; width: 0%; transition: width 0.4s ease; }
+
+        /* Календарь активности */
+        .calendar-wrap { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; margin-top: 10px; }
+        .cal-day { aspect-ratio: 1; border-radius: 3px; background: #333; position: relative; }
+        .cal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -154,13 +163,27 @@
                 </div>
                 <div style="font-size: 11px; color: var(--success-color); margin-top: 4px; text-align: right;" id="draft-status">Автосохранение активно</div>
                 <hr style="border: 0.5px solid #333; margin: 12px 0;">
-                <label>Группа мышц:</label>
-                <select id="muscle-group" onchange="populateExercises()">
-                    <option value="Грудь">Грудь</option>
-                    <option value="Спина">Спина</option>
-                    <option value="Ноги">Ноги</option>
-                    <option value="Руки">Руки</option>
-                </select>
+                
+                <div class="row-flex" style="align-items: flex-start;">
+                    <div>
+                        <label>Группа мышц:</label>
+                        <select id="muscle-group" onchange="populateExercises()">
+                            <option value="Грудь">Грудь</option>
+                            <option value="Спина">Спина</option>
+                            <option value="Ноги">Ноги</option>
+                            <option value="Руки">Руки</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Самочувствие:</label>
+                        <select id="readiness-select" onchange="saveDraft()">
+                            <option value="🟢">🟢 Отлично</option>
+                            <option value="🟡">🟡 Нормально</option>
+                            <option value="🔴">🔴 Устал</option>
+                        </select>
+                    </div>
+                </div>
+
                 <label style="margin-top:10px;">Упражнение:</label>
                 <select id="exercise-select"></select>
                 <div class="row-flex" style="margin-top:10px;">
@@ -180,11 +203,21 @@
 
     <div id="tab-history" class="tab-content" style="display:none;">
         <div class="workout-section">
+            <h2>📜 Календарь активности (30 дней)</h2>
+            <div id="activity-calendar"></div>
+            <div style="display: flex; gap: 10px; font-size: 11px; color: var(--text-muted); margin-top: 8px; justify-content: center;">
+                <div><span style="display:inline-block; width:10px; height:10px; background:var(--success-color); border-radius:2px;"></span> Тренировка</div>
+                <div><span style="display:inline-block; width:10px; height:10px; background:#4aa3ff; border-radius:2px;"></span> Бассейн</div>
+                <div><span style="display:inline-block; width:10px; height:10px; background:#ff8a65; border-radius:2px;"></span> Сауна</div>
+            </div>
+        </div>
+
+        <div class="workout-section">
             <h2>📜 История</h2>
             <div class="row-flex" style="margin-top: 10px;">
                 <button class="small-btn" style="background:#393e46;" onclick="exportData()">⬇️ Экспорт</button>
                 <button class="small-btn" style="background:#393e46;" onclick="document.getElementById('import-file').click()">⬆️ Импорт</button>
-                <button class="small-btn" style="background-color: var(--danger-color);" onclick="clearAllHistory()">🗑 Очистить всё</button>
+                <button class="small-btn" style="background-color: var(--danger-color);" onclick="clearAllHistory()">🗑 Очистить</button>
             </div>
             <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">
         </div>
@@ -331,6 +364,11 @@
     </div>
 
     <script>
+        // ===================== REGISTRATION PWA =====================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Registration failed', err));
+        }
+
         // ===================== БАЗА / ХРАНИЛИЩЕ =====================
         const DEFAULT_DB = {
             "Грудь": ["Жим штанги лежа", "Разведение гантелей на наклонной лавке"],
@@ -372,7 +410,7 @@
                 const btn = document.getElementById('tab-btn-' + t);
                 if (btn) btn.classList.toggle('active', t === name);
             });
-            if (name === 'history') renderHistory();
+            if (name === 'history') { renderHistory(); renderCalendar(); }
             if (name === 'charts') renderCharts();
             if (name === 'caffeine') document.getElementById('caffeine-date').value = getLocalIsoTime();
             updateTimerPanel();
@@ -427,7 +465,6 @@
                 (currentTab === 'workout' && sessionActive) ? 'block' : 'none';
         }
 
-        // Автосохранение черновика
         function extractSessionData() {
             const cards = document.querySelectorAll('#exercises-container .exercise-card');
             const exercisesData = []; const groups = new Set();
@@ -465,6 +502,7 @@
                 muscleGroup: [...groups].join(', ') || document.getElementById('muscle-group').value,
                 durationSec: Math.floor((Date.now() - startTime) / 1000),
                 totalVolume: Math.round(totalKg),
+                readiness: document.getElementById('readiness-select').value,
                 exercises: exercisesData
             };
         }
@@ -481,7 +519,15 @@
             }
         }
 
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                Notification.requestPermission();
+            }
+        }
+
         function startSession() {
+            requestNotificationPermission(); // Запрашиваем пуши при клике
+
             const draftObj = JSON.parse(localStorage.getItem(LS.draft) || 'null');
             if (draftObj && confirm('У тебя есть несохраненная тренировка. Восстановить черновик?')) {
                 restoreDraft(draftObj);
@@ -498,7 +544,7 @@
             document.getElementById('general-timer').innerText = 'Время сессии: 00:00';
             
             populateExercises(); recalcVolume(); updateTimerPanel();
-            draftInterval = setInterval(saveDraft, 2000); // Автосохранение каждые 2с
+            draftInterval = setInterval(saveDraft, 2000); // Автосохранение
         }
 
         function restoreDraft(draft) {
@@ -510,13 +556,13 @@
             document.getElementById('session-active').style.display = 'block';
             document.getElementById('exercises-container').innerHTML = '';
             
+            if (draft.readiness) document.getElementById('readiness-select').value = draft.readiness;
+
             draft.exercises.forEach(ex => {
                 const html = exerciseCardHTML(ex.exerciseName, ex.group, ex.unit);
                 document.getElementById('exercises-container').insertAdjacentHTML('beforeend', html);
                 
                 const card = document.getElementById('exercises-container').lastElementChild;
-                
-                // Восстановление подходов
                 const warmC = card.querySelector('.warmup-sets');
                 warmC.innerHTML = ex.warmup.map(s => warmupRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.done, s.rest)).join('');
                 
@@ -744,6 +790,7 @@
                 o.start(); o.stop(audioCtx.currentTime + 0.4);
             } catch (e) {}
         }
+        
         function completeSet(btn, restSec) {
             ensureAudio();
             btn.classList.toggle('done');
@@ -759,6 +806,17 @@
             }
             saveDraft();
         }
+        
+        function sendNativeNotification() {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification("⏱ Отдых окончен!", { 
+                    body: "Пора делать следующий подход.", 
+                    icon: "icon.png",
+                    vibrate: [200, 100, 200]
+                });
+            }
+        }
+
         function startRestTimer(seconds) {
             restEndTime = Date.now() + seconds * 1000;
             if (restInterval) clearInterval(restInterval);
@@ -770,6 +828,7 @@
                     display.innerText = "00:00"; display.style.color = "var(--success-color)";
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     beep();
+                    sendNativeNotification(); // Системный Push
                 } else {
                     display.innerText = `${String(Math.floor(r / 60)).padStart(2, '0')}:${String(r % 60).padStart(2, '0')}`;
                     display.style.color = "var(--warning-color)";
@@ -796,15 +855,53 @@
             else if (target === 'rpe' && input === rir) rpe.value = Math.max(0, 10 - val);
         }
 
-        // Завершение тренировки
         function saveWorkout() {
             const sessionData = extractSessionData();
             if (sessionData.exercises.length === 0) { alert('Нечего сохранять: заполни хотя бы один подход.'); return; }
 
             const h = get(LS.history); h.unshift(sessionData); set(LS.history, h);
 
-            endSessionUI(); renderHistory();
+            endSessionUI(); renderHistory(); renderCalendar();
             setTimeout(() => alert(`Тренировка сохранена! Объём: ${sessionData.totalVolume} кг`), 50);
+        }
+
+        // ===================== КАЛЕНДАРЬ АКТИВНОСТИ =====================
+        function renderCalendar() {
+            const container = document.getElementById('activity-calendar');
+            if (!container) return;
+            
+            const today = new Date();
+            const daysToShow = 42; // 6 недель
+            const dayMap = {};
+
+            // Собираем типы активности по дням
+            get(LS.history).forEach(e => dayMap[e.day || dayFromTs(e.id)] = 'workout');
+            get(LS.pool).forEach(e => {
+                const d = e.day || dayFromTs(e.id);
+                dayMap[d] = dayMap[d] ? 'mixed' : 'pool';
+            });
+            get(LS.sauna).forEach(e => {
+                const d = e.day || dayFromTs(e.id);
+                if(!dayMap[d]) dayMap[d] = 'sauna';
+            });
+
+            let html = '<div class="calendar-wrap">';
+            for (let i = daysToShow - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                
+                const type = dayMap[k] || 'none';
+                let bg = '#252525';
+                if (type === 'workout') bg = 'var(--success-color)';
+                else if (type === 'pool') bg = '#4aa3ff';
+                else if (type === 'sauna') bg = '#ff8a65';
+                else if (type === 'mixed') bg = '#d09bff';
+
+                html += `<div class="cal-day" style="background:${bg}" title="${formatDay(k)}: ${type}"></div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
         }
 
         // ===================== ЕДИНАЯ ИСТОРИЯ =====================
@@ -853,6 +950,8 @@
                 const s = e.data;
                 const vol = (s.totalVolume != null) ? s.totalVolume : s.exercises.reduce((a, ex) => a + setVolume(ex.working), 0);
                 const dur = s.durationSec != null ? ` · ⏳ ${fmtTime(s.durationSec)}` : '';
+                const readinessStr = s.readiness ? ` · Самочувствие: ${s.readiness}` : '';
+                
                 let body = '';
                 s.exercises.forEach(ex => {
                     const warm = ex.warmup || [], work = ex.working || [];
@@ -868,7 +967,7 @@
                 return `<div class="ev-item ev-workout">
                     <div class="ev-head">
                         <div><strong>🏋️ Тренировка</strong> <span class="ev-time">${time}</span> — ${s.muscleGroup}<br>
-                            <span class="vol-tag">Σ ${vol} кг</span>${dur}
+                            <span class="vol-tag">Σ ${vol} кг</span>${dur} <span style="font-size:12px">${readinessStr}</span>
                         </div>
                         <button class="btn-del" onclick="deleteEntry('${LS.history}','${s.id}')">✕</button>
                     </div>
@@ -948,7 +1047,6 @@
             const endStr = endDate.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
 
             const h = get(LS.sleep); 
-            // Записываем дату события по дню пробуждения
             h.unshift({ ...nowStamp(endDate.getTime()), start: startVal, end: endVal, duration, startStr, endStr }); 
             set(LS.sleep, h);
             
@@ -1007,9 +1105,7 @@
         }
         function renderWater() {
             const h = get(LS.water);
-            // Считаем сумму строго за сегодняшний день
             const todaySum = h.filter(x => x.day === todayKey()).reduce((s, x) => s + (x.ml || 0), 0);
-            
             document.getElementById('water-today').innerText = todaySum;
             
             const goal = 2000;
@@ -1025,7 +1121,7 @@
                 : '<span style="color:var(--text-muted)">Сегодня воды нет.</span>';
         }
 
-        // ===================== ВЕС, САУНА, БАССЕЙН (БЕЗ ИЗМЕНЕНИЙ) =====================
+        // ===================== ВЕС, САУНА, БАССЕЙН =====================
         function addWeight() {
             const v = parseFloat(document.getElementById('weight-input').value);
             if (!v || v <= 0) return;
@@ -1163,7 +1259,7 @@
             input.value = '';
         }
 
-        // ===================== ГРАФИКИ (ОСТАВЛЕНЫ КАК БЫЛИ) =====================
+        // ===================== ГРАФИКИ =====================
         const CHART_W = 400, CHART_TICK = '#888', CHART_GRID = '#333';
         function lineChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
             if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
@@ -1269,7 +1365,7 @@
 
         // ===================== СТАРТ =====================
         function renderAll() {
-            renderHistory(); renderWater(); renderSleep(); renderCaffeine(); renderWeight(); renderSauna(); renderPool();
+            renderHistory(); renderCalendar(); renderWater(); renderSleep(); renderCaffeine(); renderWeight(); renderSauna(); renderPool();
             if (sessionActive) populateExercises();
         }
         
