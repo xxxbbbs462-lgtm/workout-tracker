@@ -22,6 +22,7 @@
             padding: 12px; border-radius: 8px; font-size: 16px;
             width: 100%; box-sizing: border-box;
         }
+        input[type="datetime-local"] { font-size: 14px; }
         button { background-color: var(--accent-color); cursor: pointer; font-weight: bold; }
         button:active { transform: scale(0.98); }
 
@@ -101,11 +102,13 @@
         .ev-weight { border-left-color: #d09bff; }
         .ev-sauna { border-left-color: #ff8a65; }
         .ev-pool { border-left-color: #4ecca3; }
+        .ev-sleep { border-left-color: #9c27b0; }
+        .ev-caffeine { border-left-color: #795548; }
         .rest-badge { color: var(--accent-color); font-size: 11px; font-weight: bold; font-family: monospace; }
         .btn-del { background: transparent; border: none; color: var(--danger-color); width: auto; padding: 0 4px; font-size: 16px; }
 
         .small-btn { width: auto; padding: 6px 10px; font-size: 12px; }
-        .row-flex { display: flex; gap: 8px; }
+        .row-flex { display: flex; gap: 8px; align-items: center; }
         .row-flex > * { flex: 1; }
         label { display: block; margin: 4px 0; color: var(--text-muted); font-size: 14px; }
         .log-item {
@@ -114,6 +117,9 @@
             display: flex; justify-content: space-between; align-items: center;
         }
         .stopwatch { font-family: monospace; font-size: 28px; text-align: center; margin: 10px 0; color: var(--warning-color); }
+        
+        .progress-bar-bg { background: #333; border-radius: 6px; height: 12px; width: 100%; overflow: hidden; margin-top: 5px; }
+        .progress-bar-fill { background: #4aa3ff; height: 100%; width: 0%; transition: width 0.4s ease; }
     </style>
 </head>
 <body>
@@ -123,17 +129,21 @@
         <button id="tab-btn-history" onclick="showTab('history')">📜 История</button>
         <button id="tab-btn-charts" onclick="showTab('charts')">📊 Графики</button>
         <button id="tab-btn-water" onclick="showTab('water')">💧 Вода</button>
+        <button id="tab-btn-sleep" onclick="showTab('sleep')">🛏️ Сон</button>
+        <button id="tab-btn-caffeine" onclick="showTab('caffeine')">☕ Кофеин</button>
         <button id="tab-btn-weight" onclick="showTab('weight')">⚖️ Вес</button>
         <button id="tab-btn-sauna" onclick="showTab('sauna')">🧖 Сауна</button>
         <button id="tab-btn-pool" onclick="showTab('pool')">🏊 Бассейн</button>
     </div>
 
-    <!-- ============ ТРЕНИРОВКА ============ -->
     <div id="tab-workout" class="tab-content">
         <div class="workout-section" id="session-start">
             <h2>🏋️ Тренировка</h2>
             <p style="color: var(--text-muted);">Сессия не запущена. Время начнёт считаться после нажатия.</p>
             <button onclick="startSession()" style="background-color: var(--success-color);">▶ Начать сессию</button>
+            <p id="draft-notice" style="color: var(--warning-color); font-size: 13px; display: none; margin-top: 10px;">
+                ⚠️ Найден несохраненный черновик. Он будет предложен к восстановлению при старте.
+            </p>
         </div>
 
         <div id="session-active" style="display:none;">
@@ -142,6 +152,7 @@
                     <span id="general-timer">Время сессии: 00:00</span>
                     <span>Σ Объём: <span class="vol-tag" id="session-volume">0 кг</span></span>
                 </div>
+                <div style="font-size: 11px; color: var(--success-color); margin-top: 4px; text-align: right;" id="draft-status">Автосохранение активно</div>
                 <hr style="border: 0.5px solid #333; margin: 12px 0;">
                 <label>Группа мышц:</label>
                 <select id="muscle-group" onchange="populateExercises()">
@@ -167,11 +178,9 @@
         </div>
     </div>
 
-    <!-- ============ ИСТОРИЯ (единая) ============ -->
     <div id="tab-history" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>📜 История</h2>
-            <p style="color: var(--text-muted); font-size:13px; margin-top:0;">Тренировки, вода, вес, сауна и бассейн — всё одной лентой по дням.</p>
             <div class="row-flex" style="margin-top: 10px;">
                 <button class="small-btn" style="background:#393e46;" onclick="exportData()">⬇️ Экспорт</button>
                 <button class="small-btn" style="background:#393e46;" onclick="document.getElementById('import-file').click()">⬆️ Импорт</button>
@@ -182,54 +191,18 @@
         <div id="history-container"></div>
     </div>
 
-    <!-- ============ ГРАФИКИ ============ -->
-    <div id="tab-charts" class="tab-content" style="display:none;">
-        <div class="workout-section">
-            <h2>📊 Графики</h2>
-            <p style="color: var(--text-muted); font-size:13px; margin-top:0;">Динамика по всем категориям. Веса упражнений приведены к кг (lb→kg) для сравнимости.</p>
-        </div>
-
-        <div class="workout-section">
-            <h3>Прогрессия по упражнению</h3>
-            <p style="color: var(--text-muted); font-size:12px; margin:4px 0 8px;">Максимальный рабочий вес в подходе, кг.</p>
-            <select id="charts-exercise-select" onchange="renderExerciseChart()"></select>
-            <div id="chart-exercise" style="margin-top:8px;"></div>
-        </div>
-
-        <div class="workout-section">
-            <h3>Объём по неделям (кг)</h3>
-            <p style="color: var(--text-muted); font-size:12px; margin:4px 0 8px;">Последние 8 недель.</p>
-            <div id="chart-volume"></div>
-        </div>
-
-        <div class="workout-section">
-            <h3>Вес тела (кг)</h3>
-            <div id="chart-weight"></div>
-        </div>
-
-        <div class="workout-section">
-            <h3>Темп в бассейне</h3>
-            <p style="color: var(--text-muted); font-size:12px; margin:4px 0 8px;">Время на 100 м, мин:сек. Ниже = быстрее.</p>
-            <div id="chart-pool"></div>
-        </div>
-
-        <div class="workout-section">
-            <h3>Вода (14 дней)</h3>
-            <div id="chart-water"></div>
-        </div>
-
-        <div class="workout-section">
-            <h3>Сауна (14 дней, минут)</h3>
-            <div id="chart-sauna"></div>
-        </div>
-    </div>
-
-    <!-- ============ ВОДА ============ -->
     <div id="tab-water" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>💧 Вода</h2>
-            <div>Сегодня выпито: <span class="vol-tag" id="water-today">0 мл</span></div>
-            <div class="row-flex" style="margin-top:12px;">
+            <div style="display:flex; justify-content: space-between;">
+                <span>Сегодня выпито:</span>
+                <span class="vol-tag"><span id="water-today">0</span> / 2000 мл</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="water-progress"></div>
+            </div>
+            
+            <div class="row-flex" style="margin-top:16px;">
                 <button onclick="addWater(250)">+250</button>
                 <button onclick="addWater(500)">+500</button>
                 <button onclick="addWater(750)">+750</button>
@@ -240,12 +213,46 @@
             </div>
         </div>
         <div class="workout-section">
-            <h3>Журнал</h3>
+            <h3>Журнал за сегодня</h3>
             <div id="water-history"></div>
         </div>
     </div>
 
-    <!-- ============ ВЕС ============ -->
+    <div id="tab-sleep" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>🛏️ Сон</h2>
+            <label>Когда лег:</label>
+            <input type="datetime-local" id="sleep-start">
+            <label style="margin-top:10px;">Когда встал:</label>
+            <input type="datetime-local" id="sleep-end">
+            <button onclick="addSleep()" style="margin-top:12px;">Сохранить запись</button>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="sleep-history"></div>
+        </div>
+    </div>
+
+    <div id="tab-caffeine" class="tab-content" style="display:none;">
+        <div class="workout-section">
+            <h2>☕ Кофеин</h2>
+            <label>Дата приема (по умолчанию сейчас):</label>
+            <input type="datetime-local" id="caffeine-date">
+            <div class="row-flex" style="margin-top:12px;">
+                <button onclick="addCaffeine(50)">Эспрессо (50мг)</button>
+                <button onclick="addCaffeine(100)">Двойной (100мг)</button>
+            </div>
+            <div class="row-flex" style="margin-top:10px;">
+                <input id="caffeine-input" type="number" inputmode="decimal" placeholder="мг вручную">
+                <button class="small-btn" style="flex:0 0 35%;" onclick="addCaffeineManual()">Добавить</button>
+            </div>
+        </div>
+        <div class="workout-section">
+            <h3>Журнал</h3>
+            <div id="caffeine-history"></div>
+        </div>
+    </div>
+
     <div id="tab-weight" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>⚖️ Сухой вес</h2>
@@ -261,7 +268,6 @@
         </div>
     </div>
 
-    <!-- ============ САУНА ============ -->
     <div id="tab-sauna" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>🧖 Сауна</h2>
@@ -280,7 +286,6 @@
         </div>
     </div>
 
-    <!-- ============ БАССЕЙН ============ -->
     <div id="tab-pool" class="tab-content" style="display:none;">
         <div class="workout-section">
             <h2>🏊 Бассейн</h2>
@@ -297,6 +302,20 @@
             <h3>Журнал</h3>
             <div id="pool-history"></div>
         </div>
+    </div>
+
+    <div id="tab-charts" class="tab-content" style="display:none;">
+        <div class="workout-section"><h2>📊 Графики</h2></div>
+        <div class="workout-section">
+            <h3>Прогрессия по упражнению</h3>
+            <select id="charts-exercise-select" onchange="renderExerciseChart()"></select>
+            <div id="chart-exercise" style="margin-top:8px;"></div>
+        </div>
+        <div class="workout-section"><h3>Объём по неделям (кг)</h3><div id="chart-volume"></div></div>
+        <div class="workout-section"><h3>Вес тела (кг)</h3><div id="chart-weight"></div></div>
+        <div class="workout-section"><h3>Темп в бассейне</h3><div id="chart-pool"></div></div>
+        <div class="workout-section"><h3>Вода (14 дней)</h3><div id="chart-water"></div></div>
+        <div class="workout-section"><h3>Сауна (14 дней, минут)</h3><div id="chart-sauna"></div></div>
     </div>
 
     <div class="timer-panel" id="timer-panel">
@@ -323,7 +342,8 @@
             history: 'workout_history', custom: 'custom_exercises',
             water: 'water_log', weight: 'bodyweight_log',
             sauna: 'sauna_log', pool: 'pool_log',
-            units: 'exercise_units'
+            sleep: 'sleep_log', caffeine: 'caffeine_log',
+            units: 'exercise_units', draft: 'workout_draft'
         };
         const get = (k) => JSON.parse(localStorage.getItem(k) || '[]');
         const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -337,32 +357,28 @@
             return db;
         }
 
-        // ===================== ЕДИНИЦЫ ИЗМЕРЕНИЯ =====================
         const LB_TO_KG = 0.45359237;
         const unitLabel = (u) => u === 'lb' ? 'lb' : 'кг';
         const toKg = (w, u) => (parseFloat(w) || 0) * (u === 'lb' ? LB_TO_KG : 1);
-        function getUnitPref(name) {
-            return (getObj(LS.units)[name]) || 'kg';
-        }
-        function setUnitPref(name, unit) {
-            const p = getObj(LS.units); p[name] = unit; setObj(LS.units, p);
-        }
+        function getUnitPref(name) { return (getObj(LS.units)[name]) || 'kg'; }
+        function setUnitPref(name, unit) { const p = getObj(LS.units); p[name] = unit; setObj(LS.units, p); }
 
-        // ===================== ВКЛАДКИ =====================
-        const TABS = ['workout', 'history', 'charts', 'water', 'weight', 'sauna', 'pool'];
+        const TABS = ['workout', 'history', 'charts', 'water', 'weight', 'sauna', 'pool', 'sleep', 'caffeine'];
         let currentTab = 'workout';
         function showTab(name) {
             currentTab = name;
             TABS.forEach(t => {
                 document.getElementById('tab-' + t).style.display = (t === name) ? 'block' : 'none';
-                document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+                const btn = document.getElementById('tab-btn-' + t);
+                if (btn) btn.classList.toggle('active', t === name);
             });
             if (name === 'history') renderHistory();
             if (name === 'charts') renderCharts();
+            if (name === 'caffeine') document.getElementById('caffeine-date').value = getLocalIsoTime();
             updateTimerPanel();
         }
 
-        // ===================== ОБЩИЕ ХЕЛПЕРЫ =====================
+        // ===================== УТИЛИТЫ ДАТЫ =====================
         function todayKey() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -372,16 +388,15 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
         function formatDay(dayKey) {
-            // dayKey "YYYY-MM-DD" -> "DD.MM.YYYY"
             const [y, m, d] = dayKey.split('-');
             return `${d}.${m}.${y}`;
         }
         function timeFromTs(ts) {
             return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         }
-        function nowStamp() {
-            return { id: Date.now(), ts: Date.now(), day: todayKey(),
-                date: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) };
+        function nowStamp(ts = Date.now()) {
+            return { id: ts, ts: ts, day: dayFromTs(ts),
+                date: new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) };
         }
         function fmtTime(sec) {
             sec = Math.round(sec);
@@ -391,10 +406,14 @@
         function setVolume(sets) {
             return (sets || []).reduce((s, x) => s + (parseFloat(x.weight) || 0) * (parseFloat(x.reps) || 0), 0);
         }
+        function getLocalIsoTime(date = new Date()) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
 
-        // ===================== ТАЙМЕРЫ =====================
+        // ===================== ТАЙМЕРЫ И СЕССИЯ =====================
         let sessionActive = false, startTime = 0, lastSetTime = 0;
-        let restEndTime = null, restInterval = null, audioCtx = null;
+        let restEndTime = null, restInterval = null, audioCtx = null, draftInterval = null;
 
         setInterval(() => {
             if (!sessionActive) return;
@@ -408,27 +427,125 @@
                 (currentTab === 'workout' && sessionActive) ? 'block' : 'none';
         }
 
+        // Автосохранение черновика
+        function extractSessionData() {
+            const cards = document.querySelectorAll('#exercises-container .exercise-card');
+            const exercisesData = []; const groups = new Set();
+            let totalKg = 0;
+
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                const unit = card.dataset.unit || 'kg';
+                groups.add(card.dataset.group);
+                const warmup = [], working = [];
+                
+                card.querySelectorAll('.warmup-row').forEach(row => {
+                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
+                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
+                    const done = row.querySelector('.btn-check').classList.contains('done');
+                    warmup.push({ weight: w, reps: r, rest, done });
+                });
+                card.querySelectorAll('.working-row').forEach(row => {
+                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
+                    const rpe = row.querySelector('.inp-rpe').value, rir = row.querySelector('.inp-rir').value;
+                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
+                    const done = row.querySelector('.btn-check').classList.contains('done');
+                    working.push({ weight: w, reps: r, rpe, rir, tempo: '3-0-1-0', rest, done });
+                });
+                
+                if (warmup.length || working.length) {
+                    exercisesData.push({ exerciseName: name, unit, group: card.dataset.group, warmup, working });
+                    totalKg += working.reduce((s, x) => s + toKg(x.weight, unit) * (parseFloat(x.reps) || 0), 0);
+                }
+            });
+
+            return {
+                id: startTime || Date.now(),
+                date: new Date(startTime).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                muscleGroup: [...groups].join(', ') || document.getElementById('muscle-group').value,
+                durationSec: Math.floor((Date.now() - startTime) / 1000),
+                totalVolume: Math.round(totalKg),
+                exercises: exercisesData
+            };
+        }
+
+        function saveDraft() {
+            if (!sessionActive) return;
+            const data = extractSessionData();
+            localStorage.setItem(LS.draft, JSON.stringify(data));
+        }
+
+        function checkDraft() {
+            if (localStorage.getItem(LS.draft)) {
+                document.getElementById('draft-notice').style.display = 'block';
+            }
+        }
+
         function startSession() {
+            const draftObj = JSON.parse(localStorage.getItem(LS.draft) || 'null');
+            if (draftObj && confirm('У тебя есть несохраненная тренировка. Восстановить черновик?')) {
+                restoreDraft(draftObj);
+                return;
+            }
+            
+            localStorage.removeItem(LS.draft);
+            document.getElementById('draft-notice').style.display = 'none';
+
             sessionActive = true; startTime = Date.now(); lastSetTime = Date.now();
             document.getElementById('session-start').style.display = 'none';
             document.getElementById('session-active').style.display = 'block';
             document.getElementById('exercises-container').innerHTML = '';
             document.getElementById('general-timer').innerText = 'Время сессии: 00:00';
+            
             populateExercises(); recalcVolume(); updateTimerPanel();
+            draftInterval = setInterval(saveDraft, 2000); // Автосохранение каждые 2с
         }
+
+        function restoreDraft(draft) {
+            sessionActive = true; 
+            startTime = draft.id; 
+            lastSetTime = Date.now();
+            
+            document.getElementById('session-start').style.display = 'none';
+            document.getElementById('session-active').style.display = 'block';
+            document.getElementById('exercises-container').innerHTML = '';
+            
+            draft.exercises.forEach(ex => {
+                const html = exerciseCardHTML(ex.exerciseName, ex.group, ex.unit);
+                document.getElementById('exercises-container').insertAdjacentHTML('beforeend', html);
+                
+                const card = document.getElementById('exercises-container').lastElementChild;
+                
+                // Восстановление подходов
+                const warmC = card.querySelector('.warmup-sets');
+                warmC.innerHTML = ex.warmup.map(s => warmupRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.done, s.rest)).join('');
+                
+                const workC = card.querySelector('.working-sets');
+                workC.innerHTML = ex.working.map(s => workingRowHTML(unitLabel(ex.unit), s.weight, s.reps, s.rpe, s.rir, s.done, s.rest)).join('');
+            });
+
+            recalcVolume(); updateTimerPanel();
+            draftInterval = setInterval(saveDraft, 2000);
+            document.getElementById('draft-notice').style.display = 'none';
+        }
+
         function endSessionUI() {
             sessionActive = false;
+            clearInterval(draftInterval);
+            localStorage.removeItem(LS.draft);
             document.getElementById('session-start').style.display = 'block';
             document.getElementById('session-active').style.display = 'none';
             document.getElementById('exercises-container').innerHTML = '';
+            document.getElementById('draft-notice').style.display = 'none';
             skipRest(); updateTimerPanel();
         }
+
         function cancelSession() {
-            if (!confirm('Отменить сессию? Несохранённые данные пропадут.')) return;
+            if (!confirm('Отменить сессию? Данные будут удалены.')) return;
             endSessionUI();
         }
 
-        // ===================== ВЫБОР УПРАЖНЕНИЙ =====================
+        // ===================== УПРАЖНЕНИЯ И ПОДХОДЫ =====================
         function populateExercises() {
             const group = document.getElementById('muscle-group').value;
             const sel = document.getElementById('exercise-select');
@@ -455,27 +572,32 @@
                 alert('Это упражнение уже добавлено в сессию.'); return;
             }
             document.getElementById('exercises-container').insertAdjacentHTML('beforeend', exerciseCardHTML(name, group));
-            recalcVolume();
+            recalcVolume(); saveDraft();
         }
 
-        // ===================== ШАБЛОНЫ ПОДХОДОВ =====================
-        function warmupRowHTML(phW, phR = 'раз') {
+        function warmupRowHTML(uL, valW='', valR='', done=false, rest='0:00') {
+            const dClass = done ? 'done' : '';
+            const dText = done ? '⚙' : '✓';
+            const rAttr = done ? `data-actual-rest="${rest}"` : '';
             return `
                 <div class="set-row warmup-row">
-                    <input type="number" inputmode="decimal" placeholder="${phW}" class="inp-w">
-                    <input type="number" inputmode="decimal" placeholder="${phR}" class="inp-r">
+                    <input type="number" inputmode="decimal" placeholder="${uL}" class="inp-w" value="${valW}" oninput="saveDraft()">
+                    <input type="number" inputmode="decimal" placeholder="раз" class="inp-r" value="${valR}" oninput="saveDraft()">
                     <span>-</span><span>-</span>
-                    <button class="btn-check" onclick="completeSet(this, 90)">✓</button>
+                    <button class="btn-check ${dClass}" ${rAttr} onclick="completeSet(this, 90)">${dText}</button>
                 </div>`;
         }
-        function workingRowHTML(phW, phR = 'раз') {
+        function workingRowHTML(uL, valW='', valR='', valRpe='', valRir='', done=false, rest='0:00') {
+            const dClass = done ? 'done' : '';
+            const dText = done ? '⚙' : '✓';
+            const rAttr = done ? `data-actual-rest="${rest}"` : '';
             return `
                 <div class="set-row working-row">
-                    <input type="number" inputmode="decimal" placeholder="${phW}" class="inp-w" oninput="recalcVolume()">
-                    <input type="number" inputmode="decimal" placeholder="${phR}" class="inp-r" oninput="recalcVolume()">
-                    <input type="number" inputmode="decimal" placeholder="RPE" class="inp-rpe" oninput="syncRpeRir(this, 'rir')">
-                    <input type="number" inputmode="decimal" placeholder="RIR" class="inp-rir" oninput="syncRpeRir(this, 'rpe')">
-                    <button class="btn-check" onclick="completeSet(this, 180)">✓</button>
+                    <input type="number" inputmode="decimal" placeholder="${uL}" class="inp-w" value="${valW}" oninput="recalcVolume(); saveDraft()">
+                    <input type="number" inputmode="decimal" placeholder="раз" class="inp-r" value="${valR}" oninput="recalcVolume(); saveDraft()">
+                    <input type="number" inputmode="decimal" placeholder="RPE" class="inp-rpe" value="${valRpe}" oninput="syncRpeRir(this, 'rir'); saveDraft()">
+                    <input type="number" inputmode="decimal" placeholder="RIR" class="inp-rir" value="${valRir}" oninput="syncRpeRir(this, 'rpe'); saveDraft()">
+                    <button class="btn-check ${dClass}" ${rAttr} onclick="completeSet(this, 180)">${dText}</button>
                 </div>`;
         }
 
@@ -487,9 +609,9 @@
             return null;
         }
 
-        function exerciseCardHTML(name, group) {
+        function exerciseCardHTML(name, group, forceUnit = null) {
             const last = lastPerformance(name);
-            const unit = last ? last.unit : getUnitPref(name);
+            const unit = forceUnit || (last ? last.unit : getUnitPref(name));
             const uL = unitLabel(unit);
 
             let lastBlock = `<div class="last-perf">Прошлый раз: данных нет — базовая точка отсчёта.</div>`;
@@ -505,10 +627,11 @@
                         <br><button class="btn-repeat" onclick="repeatLast(this)">↺ Повторить прошлые значения</button>
                     </div>`;
             }
+            
             const lastSets = last ? last.working : [];
             const workingRows = [0, 1, 2].map(i => {
                 const s = lastSets[i];
-                return workingRowHTML(s ? (s.weight || uL) : uL, s ? (s.reps || 'раз') : 'раз');
+                return workingRowHTML(uL, s ? s.weight : '', s ? s.reps : '');
             }).join('');
 
             return `
@@ -521,7 +644,7 @@
                             <option value="lb" ${unit === 'lb' ? 'selected' : ''}>lb</option>
                         </select>
                         <span class="tempo-tag">3-0-1-0</span>
-                        <button class="btn-remove-ex" onclick="removeExercise(this)" title="Убрать упражнение">✕</button>
+                        <button class="btn-remove-ex" onclick="removeExercise(this)" title="Убрать">✕</button>
                     </div>
                 </div>
                 ${lastBlock}
@@ -555,26 +678,26 @@
             card.querySelectorAll('.inp-w').forEach(inp => {
                 if (inp.placeholder === 'кг' || inp.placeholder === 'lb') inp.placeholder = uL;
             });
-            recalcVolume();
+            recalcVolume(); saveDraft();
         }
 
-        function removeExercise(btn) { btn.closest('.exercise-card').remove(); recalcVolume(); }
+        function removeExercise(btn) { btn.closest('.exercise-card').remove(); recalcVolume(); saveDraft(); }
         function addSet(btn, type) {
             const card = btn.closest('.exercise-card');
             const uL = unitLabel(card.dataset.unit || 'kg');
             const c = card.querySelector(type === 'warmup' ? '.warmup-sets' : '.working-sets');
             c.insertAdjacentHTML('beforeend', type === 'warmup' ? warmupRowHTML(uL) : workingRowHTML(uL));
+            saveDraft();
         }
         function removeSet(btn, type) {
             const card = btn.closest('.exercise-card');
             const c = card.querySelector(type === 'warmup' ? '.warmup-sets' : '.working-sets');
-            if (c.children.length > 1) { c.removeChild(c.children[c.children.length - 1]); recalcVolume(); }
+            if (c.children.length > 1) { c.removeChild(c.children[c.children.length - 1]); recalcVolume(); saveDraft(); }
         }
         function repeatLast(btn) {
             const card = btn.closest('.exercise-card');
             const last = lastPerformance(card.dataset.name);
             if (!last) return;
-            // подгоняем единицу под прошлую тренировку
             if (last.unit !== card.dataset.unit) {
                 const sel = card.querySelector('.unit-select');
                 sel.value = last.unit;
@@ -589,7 +712,7 @@
                 rows[i].querySelector('.inp-w').value = s.weight || '';
                 rows[i].querySelector('.inp-r').value = s.reps || '';
             });
-            recalcVolume();
+            recalcVolume(); saveDraft();
         }
 
         function recalcVolume() {
@@ -608,7 +731,6 @@
             if (sv) sv.innerText = `${Math.round(totalKg)} кг`;
         }
 
-        // ===================== ОТДЫХ / ЗВУК =====================
         function ensureAudio() { if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } }
         function beep() {
             if (!audioCtx) return;
@@ -635,6 +757,7 @@
             } else {
                 btn.innerText = '✓'; btn.removeAttribute('data-actual-rest');
             }
+            saveDraft();
         }
         function startRestTimer(seconds) {
             restEndTime = Date.now() + seconds * 1000;
@@ -673,49 +796,15 @@
             else if (target === 'rpe' && input === rir) rpe.value = Math.max(0, 10 - val);
         }
 
-        // ===================== СОХРАНЕНИЕ =====================
+        // Завершение тренировки
         function saveWorkout() {
-            const cards = document.querySelectorAll('#exercises-container .exercise-card');
-            const exercisesData = []; const groups = new Set();
-            let totalKg = 0;
+            const sessionData = extractSessionData();
+            if (sessionData.exercises.length === 0) { alert('Нечего сохранять: заполни хотя бы один подход.'); return; }
 
-            cards.forEach(card => {
-                const name = card.dataset.name;
-                const unit = card.dataset.unit || 'kg';
-                groups.add(card.dataset.group);
-                const warmup = [], working = [];
-                card.querySelectorAll('.warmup-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
-                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
-                    if (w || r) warmup.push({ weight: w, reps: r, rest });
-                });
-                card.querySelectorAll('.working-row').forEach(row => {
-                    const w = row.querySelector('.inp-w').value, r = row.querySelector('.inp-r').value;
-                    const rpe = row.querySelector('.inp-rpe').value, rir = row.querySelector('.inp-rir').value;
-                    const rest = row.querySelector('.btn-check').getAttribute('data-actual-rest') || '0:00';
-                    if (w || r) working.push({ weight: w, reps: r, rpe, rir, tempo: '3-0-1-0', rest });
-                });
-                if (warmup.length || working.length) {
-                    exercisesData.push({ exerciseName: name, unit, warmup, working });
-                    setUnitPref(name, unit);
-                    totalKg += working.reduce((s, x) => s + toKg(x.weight, unit) * (parseFloat(x.reps) || 0), 0);
-                }
-            });
-
-            if (exercisesData.length === 0) { alert('Нечего сохранять: заполни хотя бы один подход.'); return; }
-
-            const session = {
-                id: Date.now(),
-                date: new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                muscleGroup: [...groups].join(', '),
-                durationSec: Math.floor((Date.now() - startTime) / 1000),
-                totalVolume: Math.round(totalKg),
-                exercises: exercisesData
-            };
-            const h = get(LS.history); h.unshift(session); set(LS.history, h);
+            const h = get(LS.history); h.unshift(sessionData); set(LS.history, h);
 
             endSessionUI(); renderHistory();
-            setTimeout(() => alert(`Тренировка сохранена! Объём: ${Math.round(totalKg)} кг`), 50);
+            setTimeout(() => alert(`Тренировка сохранена! Объём: ${sessionData.totalVolume} кг`), 50);
         }
 
         // ===================== ЕДИНАЯ ИСТОРИЯ =====================
@@ -736,6 +825,8 @@
             addSimple(LS.weight, 'weight');
             addSimple(LS.sauna, 'sauna');
             addSimple(LS.pool, 'pool');
+            addSimple(LS.sleep, 'sleep');
+            addSimple(LS.caffeine, 'caffeine');
 
             const byDay = {};
             for (const e of events) (byDay[e.day] = byDay[e.day] || []).push(e);
@@ -809,6 +900,19 @@
                     <button class="btn-del" onclick="deleteEntry('${LS.pool}','${e.data.id}')">✕</button>
                 </div></div>`;
             }
+            if (e.type === 'sleep') {
+                return `<div class="ev-item ev-sleep"><div class="ev-head">
+                    <div>🛏️ <strong>Сон: ${e.data.duration}</strong> <span class="ev-time">${time}</span><br>
+                    <span style="font-size:12px; color:var(--text-muted)">Лег: ${e.data.startStr} | Встал: ${e.data.endStr}</span></div>
+                    <button class="btn-del" onclick="deleteEntry('${LS.sleep}','${e.data.id}')">✕</button>
+                </div></div>`;
+            }
+            if (e.type === 'caffeine') {
+                return `<div class="ev-item ev-caffeine"><div class="ev-head">
+                    <div>☕ <strong>${e.data.mg} мг кофеина</strong> <span class="ev-time">${time}</span></div>
+                    <button class="btn-del" onclick="deleteEntry('${LS.caffeine}','${e.data.id}')">✕</button>
+                </div></div>`;
+            }
             return '';
         }
 
@@ -819,9 +923,75 @@
             renderAll();
         }
         function clearAllHistory() {
-            if (!confirm('Полностью очистить ВСЁ: тренировки, воду, вес, сауну, бассейн? Свои упражнения и настройки единиц останутся.')) return;
-            [LS.history, LS.water, LS.weight, LS.sauna, LS.pool].forEach(k => localStorage.removeItem(k));
+            if (!confirm('Полностью очистить ВСЁ? Свои упражнения и настройки единиц останутся.')) return;
+            [LS.history, LS.water, LS.weight, LS.sauna, LS.pool, LS.sleep, LS.caffeine].forEach(k => localStorage.removeItem(k));
             renderAll();
+        }
+
+        // ===================== СОН =====================
+        function addSleep() {
+            const startVal = document.getElementById('sleep-start').value;
+            const endVal = document.getElementById('sleep-end').value;
+            if (!startVal || !endVal) { alert('Заполни оба поля'); return; }
+            
+            const startDate = new Date(startVal);
+            const endDate = new Date(endVal);
+            const diffMs = endDate - startDate;
+            
+            if (diffMs <= 0) { alert('Время пробуждения должно быть позже времени сна'); return; }
+            
+            const hrs = Math.floor(diffMs / 3600000);
+            const mins = Math.floor((diffMs % 3600000) / 60000);
+            const duration = `${hrs}ч ${mins}м`;
+            
+            const startStr = startDate.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+            const endStr = endDate.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+
+            const h = get(LS.sleep); 
+            // Записываем дату события по дню пробуждения
+            h.unshift({ ...nowStamp(endDate.getTime()), start: startVal, end: endVal, duration, startStr, endStr }); 
+            set(LS.sleep, h);
+            
+            document.getElementById('sleep-start').value = '';
+            document.getElementById('sleep-end').value = '';
+            renderSleep();
+        }
+        function renderSleep() {
+            const h = get(LS.sleep);
+            const c = document.getElementById('sleep-history');
+            c.innerHTML = h.length ? h.map(x =>
+                `<div class="log-item" style="display:block;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>🛏️ ${x.duration} · <span style="color:var(--text-muted)">${x.date}</span></span>
+                        <button class="btn-del" onclick="deleteEntry('${LS.sleep}','${x.id}')">✕</button>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">С ${x.startStr} до ${x.endStr}</div>
+                </div>`).join('')
+                : '<span style="color:var(--text-muted)">Пусто.</span>';
+        }
+
+        // ===================== КОФЕИН =====================
+        function addCaffeine(mg) {
+            const dateVal = document.getElementById('caffeine-date').value;
+            const ts = dateVal ? new Date(dateVal).getTime() : Date.now();
+            const h = get(LS.caffeine); 
+            h.unshift({ ...nowStamp(ts), mg }); 
+            set(LS.caffeine, h);
+            renderCaffeine();
+        }
+        function addCaffeineManual() {
+            const v = parseFloat(document.getElementById('caffeine-input').value);
+            if (!v || v <= 0) return;
+            document.getElementById('caffeine-input').value = '';
+            addCaffeine(v);
+        }
+        function renderCaffeine() {
+            const h = get(LS.caffeine);
+            const c = document.getElementById('caffeine-history');
+            c.innerHTML = h.length ? h.map(x =>
+                `<div class="log-item"><span>☕ ${x.mg} мг · <span style="color:var(--text-muted)">${x.date}</span></span>
+                 <button class="btn-del" onclick="deleteEntry('${LS.caffeine}','${x.id}')">✕</button></div>`).join('')
+                : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
         // ===================== ВОДА =====================
@@ -837,16 +1007,25 @@
         }
         function renderWater() {
             const h = get(LS.water);
-            const today = h.filter(x => x.day === todayKey()).reduce((s, x) => s + (x.ml || 0), 0);
-            document.getElementById('water-today').innerText = `${today} мл`;
+            // Считаем сумму строго за сегодняшний день
+            const todaySum = h.filter(x => x.day === todayKey()).reduce((s, x) => s + (x.ml || 0), 0);
+            
+            document.getElementById('water-today').innerText = todaySum;
+            
+            const goal = 2000;
+            const pct = Math.min(100, Math.round((todaySum / goal) * 100));
+            document.getElementById('water-progress').style.width = `${pct}%`;
+            document.getElementById('water-progress').style.background = pct >= 100 ? 'var(--success-color)' : '#4aa3ff';
+
             const c = document.getElementById('water-history');
-            c.innerHTML = h.length ? h.map(x =>
-                `<div class="log-item"><span>💧 +${x.ml} мл · <span style="color:var(--text-muted)">${x.date}</span></span>
+            const todayLogs = h.filter(x => x.day === todayKey());
+            c.innerHTML = todayLogs.length ? todayLogs.map(x =>
+                `<div class="log-item"><span>💧 +${x.ml} мл · <span style="color:var(--text-muted)">${timeFromTs(x.ts)}</span></span>
                  <button class="btn-del" onclick="deleteEntry('${LS.water}','${x.id}')">✕</button></div>`).join('')
-                : '<span style="color:var(--text-muted)">Пусто.</span>';
+                : '<span style="color:var(--text-muted)">Сегодня воды нет.</span>';
         }
 
-        // ===================== ВЕС =====================
+        // ===================== ВЕС, САУНА, БАССЕЙН (БЕЗ ИЗМЕНЕНИЙ) =====================
         function addWeight() {
             const v = parseFloat(document.getElementById('weight-input').value);
             if (!v || v <= 0) return;
@@ -871,7 +1050,6 @@
             }).join('') : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
-        // ===================== САУНА =====================
         let saunaSwStart = null, saunaSwInterval = null;
         function toggleSaunaTimer() {
             const btn = document.getElementById('sauna-sw-btn');
@@ -908,7 +1086,6 @@
                 : '<span style="color:var(--text-muted)">Пусто.</span>';
         }
 
-        // ===================== БАССЕЙН =====================
         function addPool() {
             const meters = parseFloat(document.getElementById('pool-meters').value);
             const min = parseFloat(document.getElementById('pool-min').value) || 0;
@@ -933,14 +1110,10 @@
         // ===================== ЭКСПОРТ / ИМПОРТ =====================
         function exportData() {
             const payload = {
-                version: 3, exported: new Date().toISOString(),
-                workout_history: get(LS.history),
-                custom_exercises: getObj(LS.custom),
-                exercise_units: getObj(LS.units),
-                water_log: get(LS.water),
-                bodyweight_log: get(LS.weight),
-                sauna_log: get(LS.sauna),
-                pool_log: get(LS.pool)
+                version: 4, exported: new Date().toISOString(),
+                workout_history: get(LS.history), custom_exercises: getObj(LS.custom), exercise_units: getObj(LS.units),
+                water_log: get(LS.water), bodyweight_log: get(LS.weight), sauna_log: get(LS.sauna), pool_log: get(LS.pool),
+                sleep_log: get(LS.sleep), caffeine_log: get(LS.caffeine)
             };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -970,20 +1143,17 @@
                         set(key, dedup);
                     };
                     merge(LS.history, d.workout_history || (Array.isArray(d) ? d : []));
-                    merge(LS.water, d.water_log);
-                    merge(LS.weight, d.bodyweight_log);
-                    merge(LS.sauna, d.sauna_log);
-                    merge(LS.pool, d.pool_log);
+                    merge(LS.water, d.water_log); merge(LS.weight, d.bodyweight_log);
+                    merge(LS.sauna, d.sauna_log); merge(LS.pool, d.pool_log);
+                    merge(LS.sleep, d.sleep_log); merge(LS.caffeine, d.caffeine_log);
+                    
                     if (d.custom_exercises) {
                         const cur = getObj(LS.custom);
-                        for (const g of Object.keys(d.custom_exercises))
-                            cur[g] = Array.from(new Set([...(cur[g] || []), ...d.custom_exercises[g]]));
+                        for (const g of Object.keys(d.custom_exercises)) cur[g] = Array.from(new Set([...(cur[g] || []), ...d.custom_exercises[g]]));
                         setObj(LS.custom, cur);
                     }
                     if (d.exercise_units) {
-                        const cur = getObj(LS.units);
-                        Object.assign(cur, d.exercise_units);
-                        setObj(LS.units, cur);
+                        const cur = getObj(LS.units); Object.assign(cur, d.exercise_units); setObj(LS.units, cur);
                     }
                     renderAll();
                     alert('Импорт завершён.');
@@ -993,104 +1163,58 @@
             input.value = '';
         }
 
-        // ===================== ГРАФИКИ =====================
+        // ===================== ГРАФИКИ (ОСТАВЛЕНЫ КАК БЫЛИ) =====================
         const CHART_W = 400, CHART_TICK = '#888', CHART_GRID = '#333';
-
         function lineChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
-            if (!values || values.length === 0)
-                return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
-            const W = CHART_W, H = height;
-            const m = { l: 48, r: 10, t: 10, b: 26 };
-            const pw = W - m.l - m.r, ph = H - m.t - m.b;
-            let min = Math.min(...values), max = Math.max(...values);
-            if (min === max) { min -= 1; max += 1; }
-            const pad = (max - min) * 0.1;
-            const yMin = min - pad, yMax = max + pad;
-            const xy = (i, v) => {
-                const x = values.length > 1 ? m.l + i * (pw / (values.length - 1)) : m.l + pw / 2;
-                const y = m.t + ph - (v - yMin) / (yMax - yMin) * ph;
-                return [x, y];
-            };
+            if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
+            const W = CHART_W, H = height, m = { l: 48, r: 10, t: 10, b: 26 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+            let min = Math.min(...values), max = Math.max(...values); if (min === max) { min -= 1; max += 1; }
+            const pad = (max - min) * 0.1, yMin = min - pad, yMax = max + pad;
+            const xy = (i, v) => [values.length > 1 ? m.l + i * (pw / (values.length - 1)) : m.l + pw / 2, m.t + ph - (v - yMin) / (yMax - yMin) * ph];
             let grid = '';
             for (let k = 0; k <= 3; k++) {
-                const t = yMin + (yMax - yMin) * k / 3;
-                const y = m.t + ph - (t - yMin) / (yMax - yMin) * ph;
+                const t = yMin + (yMax - yMin) * k / 3, y = m.t + ph - (t - yMin) / (yMax - yMin) * ph;
                 grid += `<line x1="${m.l}" y1="${y}" x2="${W - m.r}" y2="${y}" stroke="${CHART_GRID}" stroke-width="0.5"/>`;
                 grid += `<text x="${m.l - 6}" y="${y + 4}" fill="${CHART_TICK}" font-size="10" text-anchor="end">${yFmt(t)}</text>`;
             }
-            const step = Math.max(1, Math.ceil(values.length / 5));
-            let xLbls = '';
+            const step = Math.max(1, Math.ceil(values.length / 5)); let xLbls = '';
             for (let i = 0; i < values.length; i++) {
                 if (i % step !== 0 && i !== values.length - 1) continue;
-                const [x] = xy(i, values[i]);
-                xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
+                const [x] = xy(i, values[i]); xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
             }
-            const pts = values.map((v, i) => xy(i, v).join(',')).join(' ');
-            let dots = '';
-            values.forEach((v, i) => {
-                const [x, y] = xy(i, v);
-                dots += `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`;
-            });
+            const pts = values.map((v, i) => xy(i, v).join(',')).join(' '); let dots = '';
+            values.forEach((v, i) => { const [x, y] = xy(i, v); dots += `<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`; });
             return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${dots}${xLbls}</svg>`;
         }
-
         function barChartSVG({ values, labels, yFmt = (v) => Math.round(v).toString(), color = '#00adb5', height = 200 }) {
-            if (!values || values.length === 0)
-                return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
-            const W = CHART_W, H = height;
-            const m = { l: 48, r: 10, t: 10, b: 26 };
-            const pw = W - m.l - m.r, ph = H - m.t - m.b;
-            const max = Math.max(...values, 1);
-            const yMax = max * 1.1;
-            let grid = '';
+            if (!values || values.length === 0) return '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет данных</div>';
+            const W = CHART_W, H = height, m = { l: 48, r: 10, t: 10, b: 26 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+            const max = Math.max(...values, 1), yMax = max * 1.1; let grid = '';
             for (let k = 0; k <= 3; k++) {
-                const t = yMax * k / 3;
-                const y = m.t + ph - (t / yMax) * ph;
+                const t = yMax * k / 3, y = m.t + ph - (t / yMax) * ph;
                 grid += `<line x1="${m.l}" y1="${y}" x2="${W - m.r}" y2="${y}" stroke="${CHART_GRID}" stroke-width="0.5"/>`;
                 grid += `<text x="${m.l - 6}" y="${y + 4}" fill="${CHART_TICK}" font-size="10" text-anchor="end">${yFmt(t)}</text>`;
             }
-            const bw = pw / values.length;
-            const gap = Math.min(4, bw * 0.2);
-            let bars = '';
+            const bw = pw / values.length, gap = Math.min(4, bw * 0.2); let bars = '';
             values.forEach((v, i) => {
-                const h = (v / yMax) * ph;
-                const x = m.l + i * bw + gap / 2;
-                const y = m.t + ph - h;
+                const h = (v / yMax) * ph, x = m.l + i * bw + gap / 2, y = m.t + ph - h;
                 bars += `<rect x="${x}" y="${y}" width="${Math.max(0, bw - gap)}" height="${h}" fill="${color}" rx="2"/>`;
             });
-            const step = Math.max(1, Math.ceil(values.length / 6));
-            let xLbls = '';
+            const step = Math.max(1, Math.ceil(values.length / 6)); let xLbls = '';
             for (let i = 0; i < values.length; i++) {
                 if (i % step !== 0 && i !== values.length - 1) continue;
-                const x = m.l + i * bw + bw / 2;
-                xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
+                const x = m.l + i * bw + bw / 2; xLbls += `<text x="${x}" y="${H - 8}" fill="${CHART_TICK}" font-size="10" text-anchor="middle">${labels[i] || ''}</text>`;
             }
             return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${bars}${xLbls}</svg>`;
         }
-
-        function dmShort(ts) {
-            const d = new Date(ts);
-            return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-        }
+        function dmShort(ts) { const d = new Date(ts); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`; }
         function dayToTs(dayKey) { return new Date(dayKey + 'T00:00:00').getTime(); }
-
-        function getWeightSeries() {
-            return [...get(LS.weight)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0))
-                .map(x => ({ ts: x.ts || x.id, kg: x.kg }));
-        }
-        function getPoolPaceSeries() {
-            return [...get(LS.pool)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0))
-                .filter(x => x.meters > 0)
-                .map(x => ({ ts: x.ts || x.id, paceSec: x.timeSec * 100 / x.meters }));
-        }
+        function getWeightSeries() { return [...get(LS.weight)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).map(x => ({ ts: x.ts || x.id, kg: x.kg })); }
+        function getPoolPaceSeries() { return [...get(LS.pool)].sort((a, b) => (a.ts || a.id || 0) - (b.ts || b.id || 0)).filter(x => x.meters > 0).map(x => ({ ts: x.ts || x.id, paceSec: x.timeSec * 100 / x.meters })); }
         function getDailySums(key, field, days) {
             const map = new Map();
-            for (const x of get(key)) {
-                const day = x.day || dayFromTs(x.ts || x.id);
-                map.set(day, (map.get(day) || 0) + (x[field] || 0));
-            }
-            const out = [];
-            const today = new Date(); today.setHours(0, 0, 0, 0);
+            for (const x of get(key)) { const day = x.day || dayFromTs(x.ts || x.id); map.set(day, (map.get(day) || 0) + (x[field] || 0)); }
+            const out = [], today = new Date(); today.setHours(0, 0, 0, 0);
             for (let i = days - 1; i >= 0; i--) {
                 const d = new Date(today); d.setDate(today.getDate() - i);
                 const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1102,104 +1226,54 @@
             const map = new Map();
             for (const s of get(LS.history)) {
                 if (!s.id || !s.totalVolume) continue;
-                const d = new Date(s.id);
-                const dow = d.getDay();
-                const diff = (dow === 0 ? -6 : 1 - dow);
-                const mon = new Date(d);
+                const d = new Date(s.id), dow = d.getDay(), diff = (dow === 0 ? -6 : 1 - dow), mon = new Date(d);
                 mon.setDate(d.getDate() + diff); mon.setHours(0, 0, 0, 0);
                 const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
                 map.set(key, (map.get(key) || 0) + s.totalVolume);
             }
-            return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-weeks)
-                .map(([k, v]) => ({ weekStart: k, total: v }));
+            return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-weeks).map(([k, v]) => ({ weekStart: k, total: v }));
         }
         function getExerciseList() {
             const s = new Set();
-            for (const session of get(LS.history))
-                for (const ex of (session.exercises || []))
-                    if (ex.working && ex.working.length) s.add(ex.exerciseName);
+            for (const session of get(LS.history)) for (const ex of (session.exercises || [])) if (ex.working && ex.working.length) s.add(ex.exerciseName);
             return [...s].sort();
         }
         function getExerciseProgressionKg(name) {
-            const out = [];
-            const hist = [...get(LS.history)].sort((a, b) => (a.id || 0) - (b.id || 0));
+            const out = [], hist = [...get(LS.history)].sort((a, b) => (a.id || 0) - (b.id || 0));
             for (const s of hist) {
                 const ex = (s.exercises || []).find(e => e.exerciseName === name && e.working && e.working.length);
-                if (!ex) continue;
-                const u = ex.unit || 'kg';
-                const maxRaw = Math.max(...ex.working.map(x => parseFloat(x.weight) || 0));
+                if (!ex) continue; const u = ex.unit || 'kg', maxRaw = Math.max(...ex.working.map(x => parseFloat(x.weight) || 0));
                 out.push({ ts: s.id, kg: toKg(maxRaw, u) });
             }
             return out;
         }
-
         function renderExerciseChart() {
-            const name = document.getElementById('charts-exercise-select').value;
-            const data = name ? getExerciseProgressionKg(name) : [];
-            document.getElementById('chart-exercise').innerHTML = lineChartSVG({
-                values: data.map(x => x.kg),
-                labels: data.map(x => dmShort(x.ts)),
-                yFmt: (v) => v.toFixed(1),
-                color: '#00adb5'
-            });
+            const name = document.getElementById('charts-exercise-select').value, data = name ? getExerciseProgressionKg(name) : [];
+            document.getElementById('chart-exercise').innerHTML = lineChartSVG({ values: data.map(x => x.kg), labels: data.map(x => dmShort(x.ts)), yFmt: (v) => v.toFixed(1), color: '#00adb5' });
         }
-
         function renderCharts() {
-            const exList = getExerciseList();
-            const exSel = document.getElementById('charts-exercise-select');
-            const prev = exSel.value;
-            exSel.innerHTML = exList.length
-                ? exList.map(n => `<option value="${n}">${n}</option>`).join('')
-                : '<option value="">— нет упражнений —</option>';
-            if (exList.includes(prev)) exSel.value = prev;
-            renderExerciseChart();
-
+            const exList = getExerciseList(), exSel = document.getElementById('charts-exercise-select'), prev = exSel.value;
+            exSel.innerHTML = exList.length ? exList.map(n => `<option value="${n}">${n}</option>`).join('') : '<option value="">— нет упражнений —</option>';
+            if (exList.includes(prev)) exSel.value = prev; renderExerciseChart();
             const wk = getVolumeByWeek(8);
-            document.getElementById('chart-volume').innerHTML = barChartSVG({
-                values: wk.map(x => x.total),
-                labels: wk.map(x => dmShort(dayToTs(x.weekStart))),
-                yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'к' : Math.round(v) + '',
-                color: '#ffd369'
-            });
-
+            document.getElementById('chart-volume').innerHTML = barChartSVG({ values: wk.map(x => x.total), labels: wk.map(x => dmShort(dayToTs(x.weekStart))), yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'к' : Math.round(v) + '', color: '#ffd369' });
             const ws = getWeightSeries();
-            document.getElementById('chart-weight').innerHTML = lineChartSVG({
-                values: ws.map(x => x.kg),
-                labels: ws.map(x => dmShort(x.ts)),
-                yFmt: (v) => v.toFixed(1),
-                color: '#d09bff'
-            });
-
+            document.getElementById('chart-weight').innerHTML = lineChartSVG({ values: ws.map(x => x.kg), labels: ws.map(x => dmShort(x.ts)), yFmt: (v) => v.toFixed(1), color: '#d09bff' });
             const pp = getPoolPaceSeries();
-            document.getElementById('chart-pool').innerHTML = lineChartSVG({
-                values: pp.map(x => x.paceSec),
-                labels: pp.map(x => dmShort(x.ts)),
-                yFmt: (v) => fmtTime(v),
-                color: '#4ecca3'
-            });
-
+            document.getElementById('chart-pool').innerHTML = lineChartSVG({ values: pp.map(x => x.paceSec), labels: pp.map(x => dmShort(x.ts)), yFmt: (v) => fmtTime(v), color: '#4ecca3' });
             const w14 = getDailySums(LS.water, 'ml', 14);
-            document.getElementById('chart-water').innerHTML = barChartSVG({
-                values: w14.map(x => x.value),
-                labels: w14.map(x => dmShort(dayToTs(x.day))),
-                yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'л' : Math.round(v) + '',
-                color: '#4aa3ff'
-            });
-
+            document.getElementById('chart-water').innerHTML = barChartSVG({ values: w14.map(x => x.value), labels: w14.map(x => dmShort(dayToTs(x.day))), yFmt: (v) => v >= 1000 ? (v / 1000).toFixed(1) + 'л' : Math.round(v) + '', color: '#4aa3ff' });
             const sa14 = getDailySums(LS.sauna, 'minutes', 14);
-            document.getElementById('chart-sauna').innerHTML = barChartSVG({
-                values: sa14.map(x => x.value),
-                labels: sa14.map(x => dmShort(dayToTs(x.day))),
-                yFmt: (v) => Math.round(v) + '',
-                color: '#ff8a65'
-            });
+            document.getElementById('chart-sauna').innerHTML = barChartSVG({ values: sa14.map(x => x.value), labels: sa14.map(x => dmShort(dayToTs(x.day))), yFmt: (v) => Math.round(v) + '', color: '#ff8a65' });
         }
 
         // ===================== СТАРТ =====================
         function renderAll() {
-            renderHistory(); renderWater(); renderWeight(); renderSauna(); renderPool();
+            renderHistory(); renderWater(); renderSleep(); renderCaffeine(); renderWeight(); renderSauna(); renderPool();
             if (sessionActive) populateExercises();
         }
+        
+        checkDraft();
         renderAll();
         showTab('workout');
     </script>
